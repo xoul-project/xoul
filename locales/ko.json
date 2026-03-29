@@ -241,6 +241,13 @@
         "desktop_stopped": "  ✅ Desktop 앱 종료됨",
         "desktop_restarting": "  🖥️ Desktop 앱 재시작 중...",
         "desktop_restarted": "  ✅ Desktop 앱 재시작 완료",
+        "autostart_prompt": "  🚀 Windows 시작 시 Xoul을 자동으로 실행할까요?",
+        "autostart_yn": "  (y/n, 기본: y)",
+        "autostart_invalid": "  ⚠ y 또는 n을 입력해주세요.",
+        "autostart_already": "  ✅ Xoul 자동 시작이 이미 등록되어 있습니다",
+        "autostart_done": "  ✅ Windows 시작 시 Xoul이 자동으로 실행됩니다",
+        "autostart_fail": "  ⚠ 자동 시작 등록 실패: {error}",
+        "autostart_skipped": "  ⏭ 자동 시작 건너뜀",
         "error_title": "  ❌ 설정 중 오류가 발생했습니다!",
         "error_press_enter": "  Enter를 누르면 종료됩니다"
     },

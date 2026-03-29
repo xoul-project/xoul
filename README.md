@@ -119,7 +119,7 @@ Interactive prompts for:
 
 - **User profile** — name, location, agent name
 - **Email** — Gmail with App Password (optional)
-- **Web Search** — [Tavily](https://tavily.com) API key for ad‑free search (optional, free tier available)
+- **⚠️ Web Search** — [Tavily](https://tavily.com) API key (**recommended**, free tier available). Search quality degrades significantly without it.
 - **Telegram / Discord / Slack** — bot token setup (optional)
 - **GitHub** — Personal Access Token for repo tools (optional)
 
@@ -179,3 +179,29 @@ MIT
 
 - 🌐 [Website](https://xoul.io)
 - 💬 [GitHub Discussions](https://github.com/xoul-project/xoul/discussions)
+
+## ⚡ Performance Optimization — Enable WHPX (Highly Recommended)
+
+QEMU runs in software emulation mode by default, but enabling **WHPX (Windows Hypervisor Platform)** can deliver **3–5× faster VM performance**.
+
+### How to Enable
+
+1. **Open Windows Features**
+   - Press `Win + R` → type `optionalfeatures` → Enter
+   - Or go to **Settings → Apps → Optional features → More Windows features**
+2. **Check the following options**
+   - ✅ **Hyper-V**
+   - ✅ **Windows Hypervisor Platform**
+3. **Restart your PC**
+
+> [!TIP]
+> After enabling, re-run `setup_env.ps1` and WHPX acceleration will be automatically detected and applied.
+
+### Enable via PowerShell (One-liner)
+
+```powershell
+# Run as Administrator
+Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All -NoRestart
+Enable-WindowsOptionalFeature -Online -FeatureName HypervisorPlatform -NoRestart
+Restart-Computer
+```

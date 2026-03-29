@@ -241,6 +241,13 @@
         "desktop_stopped": "  ✅ Desktop app stopped",
         "desktop_restarting": "  🖥️ Restarting Desktop app...",
         "desktop_restarted": "  ✅ Desktop app restarted",
+        "autostart_prompt": "  🚀 Start Xoul automatically when Windows starts?",
+        "autostart_yn": "  (y/n, default: y)",
+        "autostart_invalid": "  ⚠ Please enter y or n.",
+        "autostart_already": "  ✅ Xoul auto-start already registered",
+        "autostart_done": "  ✅ Xoul will start automatically on Windows boot",
+        "autostart_fail": "  ⚠ Failed to register auto-start: {error}",
+        "autostart_skipped": "  ⏭ Skipping auto-start",
         "error_title": "  ❌ An error occurred during setup!",
         "error_press_enter": "  Press Enter to exit"
     },

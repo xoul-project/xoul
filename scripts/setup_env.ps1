@@ -1490,8 +1490,9 @@ $launcherScript = Join-Path $ProjectDir "scripts\launcher.ps1"
 # 디폴트 스킬 Import (첫 설치 시)
 # ─────────────────────────────────────────────
 $defaultsMarker = Join-Path $ProjectDir ".defaults_imported"
-if (-not (Test-Path $defaultsMarker)) {
-    & (Join-Path $ProjectDir "scripts\import_defaults.ps1")
+$importScript = Join-Path $ProjectDir "scripts\import_defaults.ps1"
+if (-not (Test-Path $defaultsMarker) -and (Test-Path $importScript)) {
+    & $importScript
     "imported" | Set-Content $defaultsMarker -Encoding UTF8
 }
 
@@ -1503,6 +1504,48 @@ if ($desktopWasRunning) {
     if (Test-Path $desktopMain) {
         Start-Process -FilePath $venvPython -ArgumentList "`"$desktopMain`"" -WindowStyle Minimized
         Write-Host (T "setup.desktop_restarted") -ForegroundColor Green
+    }
+}
+
+# ─────────────────────────────────────────────
+# Windows 시작 시 자동 실행 등록
+# ─────────────────────────────────────────────
+$startupDir = [System.Environment]::GetFolderPath("Startup")
+$shortcutPath = Join-Path $startupDir "Xoul.lnk"
+$xoulBat = Join-Path $ProjectDir "desktop\Xoul.bat"
+
+if (Test-Path $xoulBat) {
+    $alreadyRegistered = Test-Path $shortcutPath
+    if ($alreadyRegistered) {
+        Write-Host (T "setup.autostart_already") -ForegroundColor Green
+    } else {
+        Write-Host ""
+        Write-Host (T "setup.autostart_prompt") -ForegroundColor Cyan
+        do {
+            $autoStartChoice = Safe-ReadHost (T "setup.autostart_yn")
+            if (-not $autoStartChoice) { $autoStartChoice = "y" }
+            if ($autoStartChoice -notin @("y", "n")) {
+                Write-Host (T "setup.autostart_invalid") -ForegroundColor Yellow
+            }
+        } while ($autoStartChoice -notin @("y", "n"))
+
+        if ($autoStartChoice -eq "y") {
+            try {
+                $ws = New-Object -ComObject WScript.Shell
+                $sc = $ws.CreateShortcut($shortcutPath)
+                $sc.TargetPath = $xoulBat
+                $sc.WorkingDirectory = $ProjectDir
+                $sc.Description = "Xoul Desktop Client"
+                $sc.WindowStyle = 7  # Minimized
+                $sc.Save()
+                [System.Runtime.InteropServices.Marshal]::ReleaseComObject($ws) | Out-Null
+                Write-Host (T "setup.autostart_done") -ForegroundColor Green
+            } catch {
+                Write-Host (T "setup.autostart_fail" @{error=$_.Exception.Message}) -ForegroundColor Yellow
+            }
+        } else {
+            Write-Host (T "setup.autostart_skipped") -ForegroundColor Gray
+        }
     }
 }
 

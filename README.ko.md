@@ -111,7 +111,7 @@ Python 3.12로 `.venv` 생성, 모든 패키지 자동 설치.
 
 - **사용자 프로필** — 이름, 위치, 에이전트 이름
 - **이메일** — Gmail 앱 비밀번호 (선택)
-- **웹 검색** — [Tavily](https://tavily.com) API 키 (선택, 무료 가능)
+- **⚠️ 웹 검색** — [Tavily](https://tavily.com) API 키 (**권고**, 무료 가능). 미설정 시 검색 품질이 크게 저하됩니다.
 - **Telegram / Discord / Slack** — 봇 토큰 (선택)
 - **GitHub** — Personal Access Token (선택)
 
@@ -171,3 +171,29 @@ MIT
 
 - 🌐 [웹사이트](https://xoul.io)
 - 💬 [GitHub Discussions](https://github.com/xoul-project/xoul/discussions)
+
+## ⚡ 성능 최적화 — WHPX 활성화 (강력 권장)
+
+QEMU VM은 기본적으로 소프트웨어 에뮬레이션으로 동작하지만, **WHPX (Windows Hypervisor Platform)** 를 활성화하면 **3~5배 빠른 VM 성능**을 얻을 수 있습니다.
+
+### 설정 방법
+
+1. **Windows 기능 활성화**
+   - `Win + R` → `optionalfeatures` 입력 → Enter
+   - 또는 **설정 → 앱 → 선택적 기능 → Windows 기능 켜기/끄기**
+2. **아래 항목을 체크**
+   - ✅ **Hyper-V**
+   - ✅ **Windows 하이퍼바이저 플랫폼**
+3. **PC 재부팅**
+
+> [!TIP]
+> 설정 후 `setup_env.ps1`을 다시 실행하면 WHPX 가속이 자동 감지되어 적용됩니다.
+
+### PowerShell로 한 번에 활성화
+
+```powershell
+# 관리자 권한으로 실행
+Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All -NoRestart
+Enable-WindowsOptionalFeature -Online -FeatureName HypervisorPlatform -NoRestart
+Restart-Computer
+```

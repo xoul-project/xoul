@@ -65,7 +65,8 @@ $IncludeFiles = @(
     "scripts\launcher.ps1",
     "scripts\reset.ps1",
     "scripts\uninstall.ps1",
-    "scripts\install.bat"
+    "scripts\install.bat",
+    "scripts\import_defaults.ps1"
 )
 
 $IncludeDirs = @(
