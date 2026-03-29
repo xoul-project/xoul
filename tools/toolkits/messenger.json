@@ -1,0 +1,45 @@
+{
+    "name": "messenger",
+    "tier": "free",
+    "description": "메신저 알림 전송 도구. 설정된 메신저(Telegram, Discord, Slack)로 메시지를 보냅니다. 알림, 리마인더, 결과 전달, 보고서 전송 등에 사용됩니다.",
+    "keywords": [
+        "메신저",
+        "알림",
+        "텔레그램",
+        "디스코드",
+        "슬랙",
+        "messenger",
+        "telegram",
+        "discord",
+        "slack",
+        "notification",
+        "보내",
+        "전송",
+        "알려"
+    ],
+    "tasks": [
+        {
+            "type": "function",
+            "function": {
+                "name": "send_notification",
+                "description": "Send a message to all configured messengers (Telegram, Discord, Slack). Use this to notify the user via their messaging apps.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "message": {
+                            "type": "string",
+                            "description": "Message content to send"
+                        },
+                        "title": {
+                            "type": "string",
+                            "description": "Optional title/header for the message"
+                        }
+                    },
+                    "required": [
+                        "message"
+                    ]
+                }
+            }
+        }
+    ]
+}

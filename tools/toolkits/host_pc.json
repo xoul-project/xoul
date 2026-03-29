@@ -1,0 +1,150 @@
+{
+    "name": "host_pc",
+    "tier": "free",
+    "description": "사용자의 Windows PC 원격 제어 도구. 데스크톱 앱 실행(크롬, 카카오톡, VSCode, 메모장, 엑셀 등), 웹사이트 URL 열기, 바탕화면/문서/다운로드 폴더의 파일 검색 및 정리, Windows 알림 표시, PowerShell 명령 실행 등 사용자 컴퓨터를 직접 조작합니다. '열어줘', '실행해줘', '틀어줘' 같은 요청에 사용됩니다.",
+    "keywords": [
+        "열어줘",
+        "실행",
+        "앱",
+        "app",
+        "브라우저",
+        "알림",
+        "notification",
+        "파일 정리",
+        "Windows",
+        "PC"
+    ],
+    "tasks": [
+        {
+            "type": "function",
+            "function": {
+                "name": "host_open_url",
+                "description": "Open a URL in the user's default browser on their PC",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "url": {
+                            "type": "string",
+                            "description": "URL to open"
+                        }
+                    },
+                    "required": [
+                        "url"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "host_find_file",
+                "description": "Search for files on the user's PC (Desktop/Documents/Downloads)",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Filename to search for"
+                        },
+                        "directory": {
+                            "type": "string",
+                            "description": "Search directory (optional)"
+                        }
+                    },
+                    "required": [
+                        "query"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "host_show_notification",
+                "description": "Show a notification on the user's PC",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string",
+                            "description": "Notification title"
+                        },
+                        "message": {
+                            "type": "string",
+                            "description": "Notification body"
+                        }
+                    },
+                    "required": [
+                        "message"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "host_open_app",
+                "description": "Launch a desktop app on the user's Windows PC.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "app_name": {
+                            "type": "string",
+                            "description": "Application name in English"
+                        }
+                    },
+                    "required": [
+                        "app_name"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "host_organize_files",
+                "description": "Organize/move files on the user's PC",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "source": {
+                            "type": "string",
+                            "description": "Source folder"
+                        },
+                        "destination": {
+                            "type": "string",
+                            "description": "Destination folder"
+                        },
+                        "pattern": {
+                            "type": "string",
+                            "description": "File pattern"
+                        }
+                    },
+                    "required": [
+                        "source",
+                        "destination"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "host_run_command",
+                "description": "Execute a PowerShell command on the user's Windows PC.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "command": {
+                            "type": "string",
+                            "description": "PowerShell command"
+                        }
+                    },
+                    "required": [
+                        "command"
+                    ]
+                }
+            }
+        }
+    ]
+}

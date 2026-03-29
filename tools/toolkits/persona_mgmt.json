@@ -1,0 +1,15 @@
+{
+    "name": "persona_mgmt",
+    "tier": "free",
+    "description": "페르소나 관리 도구. 새로운 페르소나 생성, 수정, 삭제 등 페르소나 관련 관리 작업을 수행합니다.",
+    "keywords": [
+        "페르소나 만들", "페르소나 생성", "페르소나 수정", "페르소나 삭제",
+        "create persona", "update persona", "delete persona",
+        "페르소나 편집", "persona 만들", "persona 생성"
+    ],
+    "tasks": [
+        {"type": "function", "function": {"name": "create_persona"}},
+        {"type": "function", "function": {"name": "update_persona"}},
+        {"type": "function", "function": {"name": "delete_persona"}}
+    ]
+}

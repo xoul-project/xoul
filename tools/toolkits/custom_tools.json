@@ -1,0 +1,15 @@
+{
+    "name": "custom_tools",
+    "tier": "free",
+    "description": "커스텀 도구 관리. 사용자가 직접 만든 도구를 생성, 목록 확인, 삭제합니다.",
+    "keywords": [
+        "도구 만들", "도구 생성", "도구 삭제", "커스텀 도구", "커스텀 툴",
+        "create tool", "custom tool", "remove tool", "list custom",
+        "도구 등록", "tool 만들", "tool 삭제"
+    ],
+    "tasks": [
+        {"type": "function", "function": {"name": "create_tool"}},
+        {"type": "function", "function": {"name": "list_custom_tools"}},
+        {"type": "function", "function": {"name": "remove_tool"}}
+    ]
+}

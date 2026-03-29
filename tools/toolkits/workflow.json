@@ -1,0 +1,186 @@
+{
+    "name": "workflow",
+    "tier": "free",
+    "description": "Workflow 관리 도구. 여러 작업을 하나의 워크플로우로 묶어 저장하고, 이름으로 실행하고, 수정/삭제합니다. 반복적인 복합 작업(아침 브리핑, 리포트 생성 등)을 자동화합니다. 루틴, 자동화, 작업 흐름 관리.",
+    "keywords": [
+        "workflow",
+        "워크플로우",
+        "루틴",
+        "routine",
+        "자동화",
+        "flow",
+        "작업흐름",
+        "녹화",
+        "플로우"
+    ],
+    "tasks": [
+        {
+            "type": "function",
+            "function": {
+                "name": "create_workflow",
+                "description": "Create a new workflow with multiple steps",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "Workflow name (e.g. '아침 브리핑')"
+                        },
+                        "prompts": {
+                            "type": "string",
+                            "description": "Steps to execute, separated by newline. e.g. '날씨 확인\\n일정 조회\\n메일 발송'"
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "Workflow description"
+                        },
+                        "hint_tools": {
+                            "type": "string",
+                            "description": "Comma-separated tool names as hints (e.g. 'weather,list_events,send_email')"
+                        },
+                        "schedule": {
+                            "type": "string",
+                            "description": "Auto-run schedule (e.g. 'daily 08:00', 'weekday 09:00'). Empty for manual only."
+                        }
+                    },
+                    "required": [
+                        "name",
+                        "prompts"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "run_workflow",
+                "description": "Execute/실행 a saved workflow by name. Use when user says '실행해줘', 'run', 'execute'. Do NOT use list_workflows for execution.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "Workflow name to run"
+                        }
+                    },
+                    "required": [
+                        "name"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "list_workflows",
+                "description": "Show/목록 all saved workflows. Only for viewing the list, NOT for running a workflow.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "page": {
+                            "type": "string",
+                            "description": "Page number (default '1')"
+                        },
+                        "per_page": {
+                            "type": "string",
+                            "description": "Items per page (default '10')"
+                        }
+                    },
+                    "required": []
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "view_workflow",
+                "description": "View workflow steps WITHOUT executing. Only for inspecting or editing. To RUN a workflow, use run_workflow instead.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "Workflow name to view"
+                        }
+                    },
+                    "required": [
+                        "name"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "update_workflow",
+                "description": "Update an existing workflow (prompts, description, or schedule)",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "Workflow name to update"
+                        },
+                        "prompts": {
+                            "type": "string",
+                            "description": "New steps (newline-separated). Empty to keep current."
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "New description. Empty to keep current."
+                        },
+                        "schedule": {
+                            "type": "string",
+                            "description": "New schedule. Empty to remove schedule."
+                        }
+                    },
+                    "required": [
+                        "name"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "delete_workflow",
+                "description": "Delete a saved workflow",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "Workflow name to delete"
+                        }
+                    },
+                    "required": [
+                        "name"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "ask_user",
+                "description": "Ask the user a question and wait for their answer. Use when you need user input, feedback, or data. 사용자에게 질문하고 답변을 기다릴 때 사용.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "question": {
+                            "type": "string",
+                            "description": "Question to display to the user (shown as popup title)"
+                        },
+                        "fields": {
+                            "type": "string",
+                            "description": "Comma-separated field names if multiple inputs needed (e.g. 'bedtime,waketime,quality'). Leave empty for single answer."
+                        }
+                    },
+                    "required": [
+                        "question"
+                    ]
+                }
+            }
+        }
+    ]
+}

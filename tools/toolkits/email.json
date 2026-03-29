@@ -1,0 +1,93 @@
+{
+    "name": "email",
+    "tier": "free",
+    "description": "이메일 발송, 수신, 읽기 도구. Gmail IMAP/SMTP 기반으로 메일을 보내고(send), 받은편지함에서 안 읽은 메일을 확인하고(list), 특정 메일의 본문을 읽습니다(read). 파일 첨부(attachment), 보고서 전송, 뉴스레터 확인, 업무 메일 작성, 답장(reply), 전달(forward) 등 이메일 관련 모든 작업을 처리합니다.",
+    "keywords": [
+        "이메일",
+        "메일",
+        "email",
+        "보내",
+        "발송",
+        "gmail",
+        "수신",
+        "읽기"
+    ],
+    "tasks": [
+        {
+            "type": "function",
+            "function": {
+                "name": "send_email",
+                "description": "Send an email. To attach files, pass VM file paths in the attachments list.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "to": {
+                            "type": "string",
+                            "description": "Recipient email"
+                        },
+                        "subject": {
+                            "type": "string",
+                            "description": "Subject"
+                        },
+                        "body": {
+                            "type": "string",
+                            "description": "Body text"
+                        },
+                        "attachments": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            },
+                            "description": "List of VM file paths to attach"
+                        }
+                    },
+                    "required": [
+                        "to",
+                        "subject",
+                        "body"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "list_emails",
+                "description": "Search or list emails",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "IMAP search query (default: UNSEEN)"
+                        },
+                        "max_results": {
+                            "type": "integer",
+                            "description": "Maximum results"
+                        }
+                    },
+                    "required": []
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "read_email",
+                "description": "Read the full body of an email",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "email_id": {
+                            "type": "string",
+                            "description": "Email ID"
+                        }
+                    },
+                    "required": [
+                        "email_id"
+                    ]
+                }
+            }
+        }
+    ]
+}

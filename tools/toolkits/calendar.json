@@ -1,0 +1,129 @@
+{
+    "name": "calendar",
+    "tier": "free",
+    "description": "일정 및 캘린더 관리 도구. 약속, 회의, 미팅, 병원 예약, 수업, 세미나 등 이벤트를 생성(create)하고 조회(list)하고 수정(update)하고 삭제(delete)합니다. 날짜별/주별 스케줄 확인, 반복 일정 등록, 시간 충돌 확인, 오늘/내일/이번 주 일정 보기 등 시간 관리 전반을 지원합니다.",
+    "keywords": [
+        "일정",
+        "스케줄",
+        "약속",
+        "캘린더",
+        "schedule",
+        "event",
+        "meeting",
+        "회의",
+        "예약"
+    ],
+    "tasks": [
+        {
+            "type": "function",
+            "function": {
+                "name": "create_event",
+                "description": "Create a calendar event",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string",
+                            "description": "Event title"
+                        },
+                        "date": {
+                            "type": "string",
+                            "description": "Date (YYYY-MM-DD)"
+                        },
+                        "time": {
+                            "type": "string",
+                            "description": "Time (HH:MM, omit for all-day)"
+                        },
+                        "duration": {
+                            "type": "string",
+                            "description": "Duration in minutes (default 60)"
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "Description"
+                        }
+                    },
+                    "required": [
+                        "title",
+                        "date"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "list_events",
+                "description": "List calendar events. Note: Even if calendar results are empty, check long-term Memory for recurring events.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "date": {
+                            "type": "string",
+                            "description": "Date (YYYY-MM-DD, default: today)"
+                        },
+                        "days": {
+                            "type": "integer",
+                            "description": "Number of days to query (default: 1)"
+                        }
+                    },
+                    "required": []
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "delete_event",
+                "description": "Delete a calendar event",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "event_id": {
+                            "type": "string",
+                            "description": "Event ID"
+                        }
+                    },
+                    "required": [
+                        "event_id"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "update_event",
+                "description": "Update a calendar event",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "event_id": {
+                            "type": "string",
+                            "description": "Event ID"
+                        },
+                        "title": {
+                            "type": "string",
+                            "description": "New title"
+                        },
+                        "date": {
+                            "type": "string",
+                            "description": "New date"
+                        },
+                        "time": {
+                            "type": "string",
+                            "description": "New time"
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "New description"
+                        }
+                    },
+                    "required": [
+                        "event_id"
+                    ]
+                }
+            }
+        }
+    ]
+}

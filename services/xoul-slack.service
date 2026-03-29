@@ -1,0 +1,15 @@
+[Unit]
+Description=Xoul Slack Bot Client
+After=xoul.service
+Wants=xoul.service
+
+[Service]
+Type=simple
+WorkingDirectory=/root/xoul
+ExecStart=/usr/bin/python3 /root/xoul/slack_client.py
+Restart=always
+RestartSec=10
+Environment=XOUL_CONFIG=/root/xoul/config.json
+
+[Install]
+WantedBy=multi-user.target

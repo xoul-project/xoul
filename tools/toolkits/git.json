@@ -1,0 +1,16 @@
+{
+    "name": "git",
+    "tier": "free",
+    "description": "Git 버전 관리 도구. 깃 저장소 클론, 상태 확인, 커밋, 푸시 등 Git 관련 작업을 수행합니다.",
+    "keywords": [
+        "git", "깃", "커밋", "commit", "push", "푸시", "clone", "클론",
+        "저장소", "repository", "repo", "브랜치", "branch", "pull",
+        "git_clone", "git_status", "git_commit", "git_push"
+    ],
+    "tasks": [
+        {"type": "function", "function": {"name": "git_clone"}},
+        {"type": "function", "function": {"name": "git_status"}},
+        {"type": "function", "function": {"name": "git_commit"}},
+        {"type": "function", "function": {"name": "git_push"}}
+    ]
+}

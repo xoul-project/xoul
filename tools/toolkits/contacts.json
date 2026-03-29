@@ -1,0 +1,96 @@
+{
+    "name": "contacts",
+    "tier": "free",
+    "description": "연락처 및 주소록 관리 도구. 사람의 이름, 전화번호, 핸드폰 번호, 이메일 주소, 메모를 저장(add)하고 검색(find)하고 목록을 조회(list)하고 삭제(delete)합니다. 친구, 동료, 가족, 거래처 등 인적 네트워크 정보를 체계적으로 관리합니다.",
+    "keywords": [
+        "연락처",
+        "전화번호",
+        "contact",
+        "phone",
+        "번호",
+        "주소록"
+    ],
+    "tasks": [
+        {
+            "type": "function",
+            "function": {
+                "name": "add_contact",
+                "description": "Add a contact",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "Name"
+                        },
+                        "phone": {
+                            "type": "string",
+                            "description": "Phone number"
+                        },
+                        "email": {
+                            "type": "string",
+                            "description": "Email"
+                        },
+                        "memo": {
+                            "type": "string",
+                            "description": "Notes"
+                        }
+                    },
+                    "required": [
+                        "name"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "find_contact",
+                "description": "Search the user's contact database.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query"
+                        }
+                    },
+                    "required": [
+                        "query"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "list_contacts",
+                "description": "List all contacts",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "delete_contact",
+                "description": "Delete a contact",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "Name to delete"
+                        }
+                    },
+                    "required": [
+                        "name"
+                    ]
+                }
+            }
+        }
+    ]
+}

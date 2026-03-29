@@ -1,0 +1,90 @@
+{
+    "llm": {
+        "providers": {
+            "local": {
+                "base_url": "http://10.0.2.2:11434/v1",
+                "api_key": "none",
+                "model_name": "qwen3:8b"
+            },
+            "claude": {
+                "base_url": "https://api.anthropic.com/v1",
+                "api_key": "YOUR_ANTHROPIC_API_KEY",
+                "model_name": "claude-sonnet-4-20250514"
+            },
+            "openai": {
+                "base_url": "https://api.openai.com/v1",
+                "api_key": "YOUR_OPENAI_API_KEY",
+                "model_name": "gpt-4o-mini"
+            }
+        },
+        "presence_penalty": 1.5,
+        "engine": "ollama",
+        "provider": "local",
+        "temperature": 0.7,
+        "top_p": 0.9,
+        "max_tokens": 32768,
+        "ollama_model": "qwen3:8b"
+    },
+    "vm": {
+        "ssh_port": 2222,
+        "disk_size": "20G",
+        "memory": "4096",
+        "cpus": 4
+    },
+    "server": {
+        "host": "0.0.0.0",
+        "port": 3000,
+        "api_key": "GENERATE_A_RANDOM_API_KEY_HERE"
+    },
+    "assistant": {
+        "name": "Xoul",
+        "language": "ko"
+    },
+    "google": {
+        "enabled": false
+    },
+    "clients": {
+        "telegram": {
+            "enabled": false,
+            "bot_token": "YOUR_TELEGRAM_BOT_TOKEN",
+            "chat_id": ""
+        },
+        "discord": {
+            "bot_token": "YOUR_DISCORD_BOT_TOKEN",
+            "channel_id": "",
+            "enabled": false
+        },
+        "slack": {
+            "enabled": false,
+            "bot_token": "",
+            "app_token": "",
+            "channel_id": ""
+        },
+        "kakao": {
+            "enabled": false
+        }
+    },
+    "user": {
+        "name": "Your Name",
+        "location": "Seoul",
+        "timezone": "Asia/Seoul",
+        "email": "your@email.com"
+    },
+    "email": {
+        "enabled": false,
+        "address": "your@gmail.com",
+        "app_password": "YOUR_GMAIL_APP_PASSWORD",
+        "imap_host": "imap.gmail.com",
+        "smtp_host": "smtp.gmail.com"
+    },
+    "github": {
+        "token": "YOUR_GITHUB_TOKEN",
+        "username": "your-username"
+    },
+    "llm_server": {
+        "gpu": true,
+        "ngl": 99,
+        "engine": "ollama",
+        "ctx_size": 32768
+    }
+}

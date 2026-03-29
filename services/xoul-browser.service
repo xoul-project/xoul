@@ -1,0 +1,18 @@
+[Unit]
+Description=Xoul Browser Daemon (Chromium Headless)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/xoul
+ExecStartPre=-/usr/bin/pkill -f chromium
+ExecStart=/usr/bin/python3 /root/xoul/browser_daemon.py
+Restart=always
+RestartSec=5
+TimeoutStopSec=5
+KillMode=mixed
+Environment=HOME=/root
+Environment=DISPLAY=
+
+[Install]
+WantedBy=multi-user.target

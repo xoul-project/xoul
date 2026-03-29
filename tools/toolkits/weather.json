@@ -1,0 +1,42 @@
+{
+    "name": "weather",
+    "tier": "free",
+    "description": "날씨 및 기상 정보 조회 도구. 현재 기온, 체감온도, 습도, 강수확률, 풍속, 풍향, 자외선 지수, 미세먼지, 일출/일몰 시간을 확인합니다. 최대 7일 예보를 지원하며, 비 올지, 눈 올지, 우산이 필요한지, 덥거나 추운지 등 날씨 관련 모든 질문에 답합니다. 도시명(한국어/영어)으로 검색 가능.",
+    "keywords": [
+        "날씨",
+        "기온",
+        "비",
+        "눈",
+        "weather",
+        "forecast",
+        "temperature",
+        "더워",
+        "추워",
+        "우산"
+    ],
+    "tasks": [
+        {
+            "type": "function",
+            "function": {
+                "name": "weather",
+                "description": "Get weather info: current conditions and up to 7-day forecast.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "location": {
+                            "type": "string",
+                            "description": "City name (Korean or English). Defaults to Seoul."
+                        },
+                        "days": {
+                            "type": "integer",
+                            "description": "Forecast days (1-7, default 3)"
+                        }
+                    },
+                    "required": [
+                        "location"
+                    ]
+                }
+            }
+        }
+    ]
+}

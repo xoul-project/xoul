@@ -1,0 +1,17 @@
+[Unit]
+Description=Xoul AI Agent REST API Server
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/xoul
+ExecStart=/usr/bin/python3 server.py
+Restart=always
+RestartSec=5
+TimeoutStopSec=5
+Environment=XOUL_CONFIG=/root/xoul/config.json
+EnvironmentFile=-/root/xoul/.env
+
+[Install]
+WantedBy=multi-user.target

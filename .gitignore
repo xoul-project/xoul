@@ -1,0 +1,54 @@
+# ═══════════════════════════════════════════
+# Xoul Agent — .gitignore
+# ═══════════════════════════════════════════
+# This file is committed to the repository.
+# Only project-wide rules shared by all contributors.
+# For personal local exclusions → .git/info/exclude
+
+# ─── Python ───
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# ─── Secrets / User Config ───
+config.json
+credentials.json
+token.json
+.env
+
+# ─── VM (per-user environment) ───
+vm/
+
+# ─── Build / Release ───
+dist/
+*.zip
+
+# ─── Logs / Temp ───
+*.log
+*.bak
+*.db
+logs/
+tmp_*.*
+
+# ─── Runtime Generated ───
+share/
+workspace/
+server_checkpoint.txt
+.defaults_imported
+
+# ─── Tests ───
+tests/
+
+# ─── IDE / Tools ───
+.vscode/
+.idea/
+.DS_Store
+.gemini/
+.agents/
+
+# ─── Private Services (separate repos) ───
+arena_server/
+web_service/
+xoul-store/

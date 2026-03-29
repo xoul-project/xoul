@@ -1,0 +1,16 @@
+{
+    "name": "workflow_mgmt",
+    "tier": "free",
+    "description": "워크플로우 관리 도구. 새로운 워크플로우 생성, 수정, 삭제 등 워크플로우 관련 관리 작업을 수행합니다.",
+    "keywords": [
+        "워크플로우 만들", "워크플로우 생성", "워크플로우 수정", "워크플로우 삭제",
+        "워크플로우 편집", "워크플로우 변경", "스케줄 만들", "스케줄 등록",
+        "create workflow", "update workflow", "delete workflow",
+        "schedule", "자동화 만들"
+    ],
+    "tasks": [
+        {"type": "function", "function": {"name": "create_workflow"}},
+        {"type": "function", "function": {"name": "update_workflow"}},
+        {"type": "function", "function": {"name": "delete_workflow"}}
+    ]
+}

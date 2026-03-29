@@ -1,0 +1,8 @@
+# Xoul Desktop Client 의존성
+PyQt6>=6.5
+PyQt6-WebEngine>=6.5
+keyboard>=0.13
+requests>=2.28
+markdown>=3.5
+Pygments>=2.17
+winotify>=1.1

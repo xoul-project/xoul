@@ -1,0 +1,171 @@
+{
+    "name": "meta",
+    "tier": "free",
+    "description": "커스텀 도구(tool) 및 스킬(skill) 생성/관리 메타 도구. 새로운 도구를 코드로 만들어 등록하고, 성공한 작업을 재사용 가능한 스킬로 저장하고, 기존 스킬을 검색하고, systemd 서비스/타이머를 설치합니다. 에이전트의 기능을 사용자가 직접 확장하는 자기진화(self-evolve) 메커니즘입니다.",
+    "keywords": [
+        "도구",
+        "tool",
+        "스킬",
+        "skill",
+        "서비스",
+        "service",
+        "커스텀",
+        "custom",
+        "만들어"
+    ],
+    "tasks": [
+        {
+            "type": "function",
+            "function": {
+                "name": "create_tool",
+                "description": "Create and register a new custom tool",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string"
+                        },
+                        "description": {
+                            "type": "string"
+                        },
+                        "command_template": {
+                            "type": "string"
+                        },
+                        "packages": {
+                            "type": "string"
+                        },
+                        "parameters": {
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "name",
+                        "description",
+                        "command_template"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "list_custom_tools",
+                "description": "List all registered custom tools",
+                "parameters": {
+                    "type": "object",
+                    "properties": {}
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "remove_tool",
+                "description": "Delete a custom tool",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "Tool name"
+                        }
+                    },
+                    "required": [
+                        "name"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "evolve_skill",
+                "description": "Save a successful task as a reusable skill.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "Skill name"
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "Skill description"
+                        },
+                        "trigger_keywords": {
+                            "type": "string",
+                            "description": "Trigger keywords"
+                        },
+                        "method": {
+                            "type": "string",
+                            "description": "Method"
+                        },
+                        "packages": {
+                            "type": "string"
+                        },
+                        "script": {
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "name",
+                        "description",
+                        "trigger_keywords",
+                        "method"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "find_skill",
+                "description": "Search for an existing skill that matches the request.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query"
+                        }
+                    },
+                    "required": [
+                        "query"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "install_service",
+                "description": "Create and register a systemd service/timer",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string"
+                        },
+                        "description": {
+                            "type": "string"
+                        },
+                        "command": {
+                            "type": "string"
+                        },
+                        "schedule": {
+                            "type": "string"
+                        },
+                        "oneshot": {
+                            "type": "boolean"
+                        }
+                    },
+                    "required": [
+                        "name",
+                        "description",
+                        "command"
+                    ]
+                }
+            }
+        }
+    ]
+}
