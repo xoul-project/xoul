@@ -94,8 +94,23 @@ cd xoul
 
 `winget`으로 QEMU 설치. WHPX 하드웨어 가속 자동 테스트.
 
+> [!IMPORTANT]
+> **WHPX (Windows Hypervisor Platform)** 를 활성화하면 **3~5배 빠른 VM 성능**을 얻을 수 있습니다. 아래 방법으로 설정을 강력 권장합니다.
+
+**GUI 설정:**
+1. `Win + R` → `optionalfeatures` 입력 → Enter
+2. ✅ **Hyper-V** 및 ✅ **Windows 하이퍼바이저 플랫폼** 체크
+3. PC 재부팅
+
+**PowerShell 설정** (관리자 권한):
+```powershell
+Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All -NoRestart
+Enable-WindowsOptionalFeature -Online -FeatureName HypervisorPlatform -NoRestart
+Restart-Computer
+```
+
 > [!TIP]
-> Windows 기능에서 **Hyper‑V**를 활성화하면 VM 성능이 3~5배 향상됩니다.
+> 설정 후 `setup_env.ps1`을 다시 실행하면 WHPX 가속이 자동 감지되어 적용됩니다.
 
 #### Step 4 — Python 환경
 
@@ -117,15 +132,14 @@ Python 3.12로 `.venv` 생성, 모든 패키지 자동 설치.
 
 #### Step 7 — 배포 및 실행
 
-에이전트 코드가 VM에 배포되고 모든 서비스가 자동 시작됩니다.
+에이전트 코드가 VM에 배포되고 모든 서비스가 자동 시작됩니다. 설정이 완료되면 **Desktop App이 자동으로 실행**됩니다.
 
 ## 사용법
 
-설치 후 실행:
+설치 후 Desktop App 실행:
 
 ```powershell
-.\scripts\launcher.ps1        # VM + Ollama + 서버 시작
-.\.venv\Scripts\python desktop\main.py   # 데스크톱 클라이언트
+c:\xoul\desktop\xoul.bat
 ```
 
 ## 클라이언트
@@ -163,6 +177,7 @@ xoul/
 .\scripts\launcher.ps1     # 서비스 시작
 ```
 
+
 ## 라이선스
 
 MIT
@@ -171,29 +186,3 @@ MIT
 
 - 🌐 [웹사이트](https://xoul.io)
 - 💬 [GitHub Discussions](https://github.com/xoul-project/xoul/discussions)
-
-## ⚡ 성능 최적화 — WHPX 활성화 (강력 권장)
-
-QEMU VM은 기본적으로 소프트웨어 에뮬레이션으로 동작하지만, **WHPX (Windows Hypervisor Platform)** 를 활성화하면 **3~5배 빠른 VM 성능**을 얻을 수 있습니다.
-
-### 설정 방법
-
-1. **Windows 기능 활성화**
-   - `Win + R` → `optionalfeatures` 입력 → Enter
-   - 또는 **설정 → 앱 → 선택적 기능 → Windows 기능 켜기/끄기**
-2. **아래 항목을 체크**
-   - ✅ **Hyper-V**
-   - ✅ **Windows 하이퍼바이저 플랫폼**
-3. **PC 재부팅**
-
-> [!TIP]
-> 설정 후 `setup_env.ps1`을 다시 실행하면 WHPX 가속이 자동 감지되어 적용됩니다.
-
-### PowerShell로 한 번에 활성화
-
-```powershell
-# 관리자 권한으로 실행
-Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All -NoRestart
-Enable-WindowsOptionalFeature -Online -FeatureName HypervisorPlatform -NoRestart
-Restart-Computer
-```

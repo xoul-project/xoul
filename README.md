@@ -102,8 +102,23 @@ Additionally, **BGE‑M3** (embedding) and **Qwen 2.5 3B** (summarization, CPU�
 
 QEMU is installed via `winget`. The setup tests WHPX hardware acceleration and creates or copies a VM image (~10 GB).
 
+> [!IMPORTANT]
+> Enabling **WHPX (Windows Hypervisor Platform)** delivers **3–5× faster VM performance**. We strongly recommend setting it up.
+
+**GUI setup:**
+1. Press `Win + R` → type `optionalfeatures` → Enter
+2. Check ✅ **Hyper-V** and ✅ **Windows Hypervisor Platform**
+3. Restart your PC
+
+**PowerShell setup** (Run as Administrator):
+```powershell
+Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All -NoRestart
+Enable-WindowsOptionalFeature -Online -FeatureName HypervisorPlatform -NoRestart
+Restart-Computer
+```
+
 > [!TIP]
-> Enable **Hyper‑V** in Windows Features for 3–5× faster VM performance.
+> After enabling, re-run `setup_env.ps1` and WHPX acceleration will be automatically detected and applied.
 
 ### Step 4 — Python Environment
 
@@ -125,15 +140,14 @@ Interactive prompts for:
 
 ### Step 7 — Deploy & Launch
 
-The agent code is deployed to the VM and all services start automatically.
+The agent code is deployed to the VM and all services start automatically. Once setup is complete, the **Desktop App launches automatically**.
 
 ## Usage
 
-After setup, launch with:
+To launch the Desktop App after setup:
 
 ```powershell
-.\scripts\launcher.ps1        # Start VM + Ollama + Server
-.\.venv\Scripts\python desktop\main.py   # Desktop client
+c:\xoul\desktop\xoul.bat
 ```
 
 ## Clients
@@ -171,6 +185,7 @@ If you need to re-run the setup, execute the following commands in order:
 .\scripts\launcher.ps1     # Start services
 ```
 
+
 ## License
 
 MIT
@@ -179,29 +194,3 @@ MIT
 
 - 🌐 [Website](https://xoul.io)
 - 💬 [GitHub Discussions](https://github.com/xoul-project/xoul/discussions)
-
-## ⚡ Performance Optimization — Enable WHPX (Highly Recommended)
-
-QEMU runs in software emulation mode by default, but enabling **WHPX (Windows Hypervisor Platform)** can deliver **3–5× faster VM performance**.
-
-### How to Enable
-
-1. **Open Windows Features**
-   - Press `Win + R` → type `optionalfeatures` → Enter
-   - Or go to **Settings → Apps → Optional features → More Windows features**
-2. **Check the following options**
-   - ✅ **Hyper-V**
-   - ✅ **Windows Hypervisor Platform**
-3. **Restart your PC**
-
-> [!TIP]
-> After enabling, re-run `setup_env.ps1` and WHPX acceleration will be automatically detected and applied.
-
-### Enable via PowerShell (One-liner)
-
-```powershell
-# Run as Administrator
-Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All -NoRestart
-Enable-WindowsOptionalFeature -Online -FeatureName HypervisorPlatform -NoRestart
-Restart-Computer
-```
