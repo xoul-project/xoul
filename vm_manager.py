@@ -198,7 +198,7 @@ def _build_accel_args(qemu_path=None):
     accel = detect_accel(qemu_path)
     if accel == "whpx":
         # WHPX + kernel-irqchip=off (segfault 방지)
-        return ["-accel", "whpx,kernel-irqchip=off"]
+        return ["-accel", "whpx"]
     else:
         return ["-cpu", "max,-x2apic"]
 
@@ -364,7 +364,7 @@ def post_install_setup():
     ] + ["-smp", str(vm_cfg["cpus"])] + [
         "-drive", f"file={_short_path(DISK_IMAGE)},format=qcow2,if=virtio",
         "-cdrom", _short_path(seed_iso),
-        "-netdev", f"user,id=net0,hostfwd=tcp::{vm_cfg['ssh_port']}-:22,hostfwd=tcp::3000-:3000",
+        "-netdev", f"user,id=net0,dns=8.8.8.8,hostfwd=tcp::{vm_cfg['ssh_port']}-:22,hostfwd=tcp::3000-:3000",
         "-device", "virtio-net-pci,netdev=net0",
         "-display", "none",
         "-serial", f"file:{_short_path(os.path.join(VM_DIR, 'serial.log'))}",
@@ -528,6 +528,12 @@ def post_install_setup():
 
         # workspace
         _ssh_run("mkdir -p /root/workspace /root/share", quiet=True)
+
+        # swap 설정 (1GB — OOM 방지)
+        print("  💾 Setting up 1GB swap...")
+        _ssh_run("fallocate -l 1G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile", quiet=True)
+        _ssh_run("grep -q swapfile /etc/fstab || echo '/swapfile swap swap defaults 0 0' >> /etc/fstab", quiet=True)
+        print("  ✅ Swap configured")
 
         print(f"  ✅ VM setup complete! (SSH port {vm_cfg['ssh_port']})")
         return True
@@ -694,7 +700,7 @@ def start_vm(install_mode=False):
         "-m", vm_cfg["memory"],
     ] + ["-smp", str(vm_cfg["cpus"])] + [
         "-drive", f"file={_short_path(DISK_IMAGE)},format=qcow2,if=virtio",
-        "-netdev", f"user,id=net0,hostfwd=tcp::{vm_cfg['ssh_port']}-:22,hostfwd=tcp::3000-:3000",
+        "-netdev", f"user,id=net0,dns=8.8.8.8,hostfwd=tcp::{vm_cfg['ssh_port']}-:22,hostfwd=tcp::3000-:3000",
         "-device", "virtio-net-pci,netdev=net0",
         "-display", "none",
         "-serial", f"file:{_short_path(os.path.join(VM_DIR, 'serial.log'))}",

@@ -10,6 +10,7 @@ import collections
 import hashlib
 import json
 import os
+import queue
 import re
 import signal
 import socket
@@ -27,7 +28,7 @@ CHROMIUM_PORT = 9222
 DAEMON_PORT = 9223
 CHROMIUM_CMD = (
     "chromium-browser --headless=new --disable-gpu --no-sandbox "
-    "--disable-software-rasterizer --disable-dev-shm-usage "
+    "--disable-dev-shm-usage "
     "--blink-settings=imagesEnabled=false "
     "--disable-background-networking "
     "--disable-default-apps "
@@ -44,9 +45,15 @@ CHROMIUM_CMD = (
 
 chromium_proc = None
 _screencast_stop = False  # 스크린캐스트 중지 시그널
+_screencast_session_id = 0  # 세션 ID (연속 호출 BrokenPipeError 방지)
 _screencast_buffer = {"frame": "", "ts": 0, "seq": 0, "source": "url", "url_idx": 0}  # 공유 프레임 버퍼
 _screencast_queue = collections.deque(maxlen=64)  # 프레임 큐 (버퍼 폴링 모드용, 유실 방지)
 _screencast_lock = threading.Lock()  # 큐 동기화
+
+# ── 탭 풀 (4개 상주) ──
+TAB_POOL_SIZE = 4
+_tab_pool = queue.Queue(maxsize=TAB_POOL_SIZE)  # {"id": str, "ws_url": str}
+_tab_pool_ready = False
 
 
 def _force_close_tab(tab_id):
@@ -63,18 +70,88 @@ def _force_close_tab(tab_id):
             pass
 
 
-def _cleanup_stale_tabs():
-    """기본 about:blank 탭만 남기고 나머지 모두 닫기 (탭 누적 방지)"""
+def init_tab_pool():
+    """Chromium 시작 후 4개 탭을 사전 생성하여 풀에 넣기"""
+    global _tab_pool_ready
+    # 기존 탭 정리
     try:
-        with urllib.request.urlopen(f"http://127.0.0.1:{CHROMIUM_PORT}/json", timeout=2) as resp:
+        with urllib.request.urlopen(f"http://127.0.0.1:{CHROMIUM_PORT}/json", timeout=3) as resp:
             tabs = json.loads(resp.read().decode())
-        closed = 0
         for tab in tabs:
             if tab.get("url", "") != "about:blank":
                 _force_close_tab(tab.get("id"))
-                closed += 1
-        if closed:
-            print(f"[browser_daemon] 🧹 stale tabs closed: {closed}", flush=True)
+    except Exception:
+        pass
+
+    created = 0
+    for i in range(TAB_POOL_SIZE):
+        try:
+            req = urllib.request.Request(
+                f"http://127.0.0.1:{CHROMIUM_PORT}/json/new?about:blank",
+                method='PUT'
+            )
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                tab_info = json.loads(resp.read().decode())
+            tab_id = tab_info.get("id", "")
+            ws_url = tab_info.get("webSocketDebuggerUrl", "")
+            if tab_id and ws_url:
+                _tab_pool.put({"id": tab_id, "ws_url": ws_url})
+                created += 1
+        except Exception as e:
+            print(f"[browser_daemon] ⚠ 탭 {i} 생성 실패: {e}", flush=True)
+    _tab_pool_ready = created > 0
+    print(f"[browser_daemon] 🏊 탭 풀 초기화: {created}/{TAB_POOL_SIZE}개", flush=True)
+
+
+def _acquire_tab(timeout=10):
+    """풀에서 탭 하나 획득 후, /json에서 최신 ws_url 갱신"""
+    try:
+        tab_info = _tab_pool.get(timeout=timeout)
+    except queue.Empty:
+        return None
+    # ws_url 갱신 (이전 WebSocket 닫히면 URL이 바뀐 수 있음)
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{CHROMIUM_PORT}/json", timeout=3) as resp:
+            tabs = json.loads(resp.read().decode())
+        for t in tabs:
+            if t.get("id") == tab_info["id"]:
+                new_ws = t.get("webSocketDebuggerUrl", "")
+                if new_ws:
+                    tab_info["ws_url"] = new_ws
+                break
+    except Exception:
+        pass
+    return tab_info
+
+
+def _release_tab(tab_info):
+    """탭을 풀에 반납 (단순 반납, WebSocket 건드리지 않음)"""
+    if not tab_info:
+        return
+    try:
+        _tab_pool.put_nowait(tab_info)
+    except queue.Full:
+        pass
+
+
+def _recreate_tab_for_pool(old_tab_info=None):
+    """탭이 죽었을 때 새로 만들어서 풀에 반납"""
+    if old_tab_info:
+        _force_close_tab(old_tab_info.get("id"))
+    try:
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{CHROMIUM_PORT}/json/new?about:blank",
+            method='PUT'
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            tab_info = json.loads(resp.read().decode())
+        new_tab = {"id": tab_info.get("id", ""), "ws_url": tab_info.get("webSocketDebuggerUrl", "")}
+        if new_tab["id"] and new_tab["ws_url"]:
+            try:
+                _tab_pool.put_nowait(new_tab)
+            except queue.Full:
+                pass
+            return
     except Exception:
         pass
 
@@ -190,7 +267,6 @@ class MiniWebSocket:
 # ═══════════════════════════════════════
 
 def start_chromium():
-    """Chromium headless 프로세스를 시작합니다."""
     global chromium_proc
     print(f"[browser_daemon] Chromium 시작 중 (CDP port={CHROMIUM_PORT})...", flush=True)
     chromium_proc = subprocess.Popen(
@@ -208,60 +284,61 @@ def start_chromium():
     return False
 
 
-def fetch_page_cdp(url: str, max_timeout: int = 10, idle_timeout: float = 2.0) -> str:
-    """상주 Chromium에 CDP WebSocket으로 페이지 로드 + DOM 텍스트 추출
-    
-    max_timeout: 최대 대기 시간 (로딩 중이라도 이 시간이 지나면 중단)
-    idle_timeout: 이벤트 없이 이 시간이 지나면 "막힌 것"으로 판단하고 중단
-    """
+def fetch_page_cdp(url: str, max_timeout: int = 12, idle_timeout: float = 2.0) -> tuple:
+    """새 탭 생성 → CDP로 페이지 로드 + DOM 텍스트 추출 + 스크린샷 → 탭 닫기
+    Returns: (html: str, screenshot_base64: str)"""
     tab_id = None
     ws = None
+    final_screenshot = ""
     try:
-        # 1. 새 탭 생성
-        encoded_url = urllib.request.quote(url, safe='')
-        new_tab_url = f"http://127.0.0.1:{CHROMIUM_PORT}/json/new?{encoded_url}"
+        # 빈 탭 생성 (URL 없이 — 이벤트 등록 후 navigate)
+        new_tab_url = f"http://127.0.0.1:{CHROMIUM_PORT}/json/new"
         req = urllib.request.Request(new_tab_url, method='PUT')
         with urllib.request.urlopen(req, timeout=5) as resp:
             tab_info = json.loads(resp.read().decode())
         tab_id = tab_info.get("id", "")
         ws_url = tab_info.get("webSocketDebuggerUrl", "")
         if not ws_url:
-            return ""
+            return "", ""
 
-        # 2. WebSocket 연결
         ws = MiniWebSocket(ws_url, timeout=idle_timeout)
 
-        # 3. Page + Network enable (이벤트로 로딩 상태 감지)
-        # 뷰포트 설정 (1920x1080)
-        ws.send(json.dumps({
-            "id": 0, "method": "Emulation.setDeviceMetricsOverride",
-            "params": {"width": 1920, "height": 1080, "deviceScaleFactor": 1, "mobile": False}
-        }))
-        ws.recv()
+        # 뷰포트 + 이벤트 활성화 (navigate 전에 먼저!)
+        def _cdp_send_recv(ws, msg_id, method, params=None):
+            """CDP 명령 전송 + ID 매칭 응답 대기 (이벤트 무시)"""
+            payload = {"id": msg_id, "method": method}
+            if params:
+                payload["params"] = params
+            ws.send(json.dumps(payload))
+            for _ in range(20):
+                resp = ws.recv()
+                if not resp:
+                    return None
+                data = json.loads(resp)
+                if data.get("id") == msg_id:
+                    return data
+            return None
 
-        ws.send(json.dumps({"id": 1, "method": "Page.enable"}))
-        ws.recv()  # ack
-        ws.send(json.dumps({"id": 2, "method": "Network.enable"}))
-        ws.recv()  # ack
+        _cdp_send_recv(ws, 0, "Emulation.setDeviceMetricsOverride",
+                       {"width": 1920, "height": 1080, "deviceScaleFactor": 1, "mobile": False})
+        _cdp_send_recv(ws, 1, "Page.enable")
 
-        # 4. 활동 기반 대기 + 스크린캐스트 캡처
-        #    - CDP 이벤트가 오면 "로딩 중" → 타이머 리셋
-        #    - idle_timeout(3초) 동안 이벤트 없으면 "막힘" → 중단
-        #    - max_timeout(10초)이면 무조건 중단
-        #    - 로딩 중 주기적으로 스크린샷 캡처 → 공유 버퍼에 저장
+        # 이벤트 등록 완료 후 navigate
+        _cdp_send_recv(ws, 3, "Page.navigate", {"url": url})
+
         global _screencast_buffer
-        # URL 인덱스 증가 (새 URL 시작 알림, 병렬 browse 대비 lock)
         with _screencast_lock:
             _screencast_buffer["url_idx"] = _screencast_buffer.get("url_idx", 0) + 1
             my_url_idx = _screencast_buffer["url_idx"]
         deadline = time.time() + max_timeout
         last_activity = time.time()
-        last_capture = time.time()  # 첫 캡처는 0.5초 후 (interval 0.5s)
+        last_capture = time.time()
         capture_id = 900
-        load_done = False
 
+        screenshot_sent = 0
+        screenshot_recv = 0
+        print(f"[browser_daemon] 🔍 fetch loop starting: url_idx={my_url_idx} timeout={max_timeout}s", flush=True)
         while time.time() < deadline:
-            # 스크린샷 캡처 요청 (~2fps, 500ms 간격 — 렌더링 후 캡처)
             now = time.time()
             if now - last_capture >= 0.5:
                 capture_id += 1
@@ -270,8 +347,9 @@ def fetch_page_cdp(url: str, max_timeout: int = 10, idle_timeout: float = 2.0) -
                         "id": capture_id, "method": "Page.captureScreenshot",
                         "params": {"format": "jpeg", "quality": 45}
                     }))
-                except Exception:
-                    pass
+                    screenshot_sent += 1
+                except Exception as e:
+                    print(f"[browser_daemon] ⚠ screenshot send error: {e}", flush=True)
                 last_capture = time.time()
 
             remaining = min(idle_timeout, deadline - time.time())
@@ -283,108 +361,115 @@ def fetch_page_cdp(url: str, max_timeout: int = 10, idle_timeout: float = 2.0) -
                 if not msg:
                     break
                 data = json.loads(msg)
+                msg_id = data.get("id", -1)
+                msg_method = data.get("method", "")
+                msg_error = data.get("error", "")
 
-                # 스크린샷 응답 처리 (id >= 900)
-                if data.get("id", 0) >= 900:
+                if msg_id >= 900:
+                    screenshot_recv += 1
+                    if msg_error:
+                        print(f"[browser_daemon] ⚠ screenshot error id={msg_id}: {msg_error}", flush=True)
+                        continue
                     frame = data.get("result", {}).get("data", "")
-                    # 빈 페이지 필터 (빈 JPEG는 ~1KB 미만, 실제 콘텐츠는 10KB+)
                     if frame and len(frame) > 2000:
                         _screencast_buffer["frame"] = frame
                         _screencast_buffer["ts"] = time.time()
                         _screencast_buffer["seq"] += 1
-                        _screencast_buffer["source"] = "url"  # URL 탐색 프레임
-                        # 큐에도 추가 (버퍼 폴링 모드에서 유실 방지)
+                        _screencast_buffer["source"] = "url"
                         with _screencast_lock:
                             _screencast_queue.append({
                                 "frame": frame,
                                 "source": "url",
                                 "url_idx": my_url_idx
                             })
-                        if _screencast_buffer["seq"] % 5 == 1:
-                            print(f"[browser_daemon] 📸 buffer seq={_screencast_buffer['seq']} ({len(frame)}B)", flush=True)
+                            qlen = len(_screencast_queue)
+                        print(f"[browser_daemon] 📸 frame queued: url_idx={my_url_idx} size={len(frame)}B qlen={qlen}", flush=True)
+                    else:
+                        print(f"[browser_daemon] ⚠ screenshot too small: id={msg_id} len={len(frame) if frame else 0}", flush=True)
                     continue
 
-                # 페이지 이벤트 처리
                 last_activity = time.time()
-                if data.get("method") == "Page.loadEventFired":
-                    load_done = True
+                if msg_method == "Page.loadEventFired":
+                    print(f"[browser_daemon] ✅ Page.loadEventFired url_idx={my_url_idx} sent={screenshot_sent} recv={screenshot_recv}", flush=True)
                     time.sleep(0.5)
-                    # 최종 스크린샷
-                    try:
-                        capture_id += 1
-                        ws.send(json.dumps({
-                            "id": capture_id, "method": "Page.captureScreenshot",
-                            "params": {"format": "jpeg", "quality": 45}
-                        }))
-                        cap_msg = ws.recv()
-                        cap_data = json.loads(cap_msg)
-                        frame = cap_data.get("result", {}).get("data", "")
-                        if frame:
-                            with _screencast_lock:
-                                _screencast_queue.append({
-                                    "frame": frame,
-                                    "source": "url",
-                                    "url_idx": my_url_idx
-                                })
-                            _screencast_buffer["frame"] = frame
-                            _screencast_buffer["ts"] = time.time()
-                            _screencast_buffer["seq"] += 1
-                            _screencast_buffer["source"] = "url"
-                    except Exception:
-                        pass
                     break
             except socket.timeout:
                 idle = time.time() - last_activity
                 if idle >= idle_timeout:
-                    print(f"[browser_daemon] ⏱ {idle:.1f}초 무응답 → 중단", flush=True)
+                    print(f"[browser_daemon] ⏱ idle timeout url_idx={my_url_idx} sent={screenshot_sent} recv={screenshot_recv}", flush=True)
                     break
-            except Exception:
+            except Exception as e:
+                print(f"[browser_daemon] ⚠ loop error: {e}", flush=True)
                 break
+        print(f"[browser_daemon] 🔍 fetch loop done: url_idx={my_url_idx} sent={screenshot_sent} recv={screenshot_recv}", flush=True)
 
-        # 5. DOM 텍스트 추출
-        ws.send(json.dumps({
-            "id": 2,
-            "method": "Runtime.evaluate",
-            "params": {"expression": "document.documentElement.outerHTML"}
-        }))
-        result_msg = ws.recv()
-        result_data = json.loads(result_msg)
-        html = result_data.get("result", {}).get("result", {}).get("value", "")
-
-        # 6. 최종 스크린샷 보장 (빠른 페이지도 최소 1프레임)
+        # ── DOM 텍스트 추출 (먼저 — 안정적으로 작동) ──
+        html = ""
         try:
-            ws.sock.settimeout(2)
-            ws.send(json.dumps({
-                "id": 999, "method": "Page.captureScreenshot",
-                "params": {"format": "jpeg", "quality": 50}
-            }))
-            final_msg = ws.recv()
-            final_data = json.loads(final_msg)
-            final_frame = final_data.get("result", {}).get("data", "")
-            if final_frame and len(final_frame) > 2000:
-                _screencast_buffer["frame"] = final_frame
-                _screencast_buffer["ts"] = time.time()
-                _screencast_buffer["seq"] += 1
-                _screencast_buffer["source"] = "url"
-                with _screencast_lock:
-                    _screencast_queue.append({
-                        "frame": final_frame,
-                        "source": "url",
-                        "url_idx": my_url_idx
-                    })
-                print(f"[browser_daemon] 📸 final frame for url_idx={my_url_idx} ({len(final_frame)}B)", flush=True)
-        except Exception:
-            pass
+            ws.sock.settimeout(5)
+            ws.send(json.dumps({"id": 10, "method": "Runtime.evaluate", "params": {"expression": "document.documentElement.outerHTML"}}))
+            for _ in range(20):
+                rmsg = ws.recv()
+                if not rmsg:
+                    break
+                rd = json.loads(rmsg)
+                if rd.get("id") == 10:
+                    html = rd.get("result", {}).get("result", {}).get("value", "")
+                    break
+        except Exception as e:
+            print(f"[browser_daemon] ⚠ DOM 추출 오류: {e}", flush=True)
 
-        return html
+        # ── 최종 스크린샷 (DOM 추출 후 — WebSocket 아직 살아있음) ──
+        try:
+            ws.sock.settimeout(5)
+            ws.send(json.dumps({"id": 999, "method": "Page.captureScreenshot", "params": {"format": "jpeg", "quality": 50}}))
+            print(f"[browser_daemon] 📤 screenshot sent id=999, waiting...", flush=True)
+            found_999 = False
+            for attempt in range(50):
+                fmsg = ws.recv()
+                if not fmsg:
+                    print(f"[browser_daemon] ⚠ screenshot recv #{attempt}: empty", flush=True)
+                    break
+                fd = json.loads(fmsg)
+                msg_id = fd.get("id", "none")
+                method = fd.get("method", "")
+                if msg_id == 999:
+                    ff = fd.get("result", {}).get("data", "")
+                    if ff and len(ff) > 500:
+                        final_screenshot = ff
+                        with _screencast_lock:
+                            _screencast_queue.append({"frame": ff, "source": "url", "url_idx": my_url_idx})
+                        print(f"[browser_daemon] 📸 screenshot: url_idx={my_url_idx} size={len(ff)}B (attempt={attempt})", flush=True)
+                    else:
+                        print(f"[browser_daemon] ⚠ screenshot too small: {len(ff) if ff else 0}B", flush=True)
+                    found_999 = True
+                    break
+                # 이벤트 무시
+                if attempt < 3:
+                    print(f"[browser_daemon] 🔍 screenshot recv #{attempt}: id={msg_id} method={method} keys={list(fd.keys())[:5]}", flush=True)
+            if not found_999:
+                print(f"[browser_daemon] ❌ screenshot id=999 not found after {attempt+1} messages", flush=True)
+        except Exception as e:
+            print(f"[browser_daemon] ⚠ screenshot 오류: {e}", flush=True)
+
+        return html, final_screenshot
 
     except Exception as e:
         print(f"[browser_daemon] CDP 오류: {e}", flush=True)
-        return ""
+        return "", ""
     finally:
         if ws:
             ws.close()
-        _force_close_tab(tab_id)
+        # 사용 완료 탭 닫기 (최소 1개 유지 — Chromium 종료 방지)
+        if tab_id:
+            try:
+                tabs_resp = urllib.request.urlopen(f"http://127.0.0.1:{CHROMIUM_PORT}/json", timeout=2)
+                tabs = json.loads(tabs_resp.read().decode())
+                if len(tabs) > 1:
+                    close_req = urllib.request.Request(f"http://127.0.0.1:{CHROMIUM_PORT}/json/close/{tab_id}", method='PUT')
+                    urllib.request.urlopen(close_req, timeout=2)
+            except Exception:
+                pass
 
 
 # ═══════════════════════════════════════
@@ -462,15 +547,16 @@ class BrowserHandler(BaseHTTPRequestHandler):
             start_time = time.time()
 
             html = ""
+            screenshot = ""
 
             # 1차: 상주 Chromium CDP (JS 렌더링 지원) — 기본
-            html = fetch_page_cdp(url)
+            html, screenshot = fetch_page_cdp(url)
 
             # 2차: CDP 실패 시 wget 폴백
             if not html or len(clean_html(html)) < 100:
                 try:
-                    cmd = f"wget -qO- --timeout=5 --header='User-Agent: Mozilla/5.0' '{url}' 2>/dev/null"
-                    result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=12)
+                    cmd = f"wget -qO- --timeout=3 --header='User-Agent: Mozilla/5.0' '{url}' 2>/dev/null"
+                    result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=7)
                     if result.returncode == 0 and len(result.stdout) > len(html or ""):
                         html = result.stdout
                 except Exception:
@@ -480,15 +566,19 @@ class BrowserHandler(BaseHTTPRequestHandler):
 
             if html:
                 content = extract_content(html, url)
-                print(f"[browser_daemon] ✅ {len(content)}자 추출 ({elapsed:.1f}초)", flush=True)
+                print(f"[browser_daemon] ✅ {len(content)}자 추출 ({elapsed:.1f}초) screenshot={len(screenshot)}B", flush=True)
             else:
                 content = f"❌ 페이지를 로드할 수 없습니다: {url}"
                 print(f"[browser_daemon] ❌ 로드 실패 ({elapsed:.1f}초)", flush=True)
 
+            resp_data = {"content": content, "elapsed": elapsed}
+            if screenshot:
+                resp_data["screenshot"] = screenshot
+
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.end_headers()
-            self.wfile.write(json.dumps({"content": content, "elapsed": elapsed}).encode("utf-8"))
+            self.wfile.write(json.dumps(resp_data).encode("utf-8"))
             return
 
         if parsed.path == "/screencast":
@@ -498,8 +588,6 @@ class BrowserHandler(BaseHTTPRequestHandler):
         if parsed.path == "/screencast/stop":
             global _screencast_stop
             _screencast_stop = True
-            # 모든 열린 탭 정리 (OOM 방지)
-            _cleanup_stale_tabs()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
@@ -511,8 +599,10 @@ class BrowserHandler(BaseHTTPRequestHandler):
 
     def _handle_screencast(self, parsed):
         """SSE 스트리밍 — 전용 탭을 열어 검색 페이지를 캡처"""
-        global _screencast_stop
+        global _screencast_stop, _screencast_session_id
         _screencast_stop = False
+        _screencast_session_id += 1
+        my_session = _screencast_session_id
 
         params = parse_qs(parsed.query)
         query = params.get("q", [""])[0]
@@ -539,22 +629,31 @@ class BrowserHandler(BaseHTTPRequestHandler):
             # 큐 초기화
             with _screencast_lock:
                 _screencast_queue.clear()
-            deadline = time.time() + 30
+            deadline = time.time() + 90
             frame_count = 0
-            while time.time() < deadline and not _screencast_stop:
+            poll_log_counter = 0
+            while time.time() < deadline and not _screencast_stop and _screencast_session_id == my_session:
                 try:
                     # 큐에서 모든 대기 프레임 드레인
                     frames_to_send = []
                     with _screencast_lock:
                         while _screencast_queue:
                             frames_to_send.append(_screencast_queue.popleft())
+                    if frames_to_send:
+                        print(f"[browser_daemon] 📤 polling: sending {len(frames_to_send)} frames", flush=True)
                     for fdata in frames_to_send:
                         frame_count += 1
                         sse_data = json.dumps(fdata)
                         self.wfile.write(f"data: {sse_data}\n\n".encode())
                         self.wfile.flush()
+                    poll_log_counter += 1
+                    if poll_log_counter % 40 == 0:  # ~6초마다 로그
+                        with _screencast_lock:
+                            qlen = len(_screencast_queue)
+                        print(f"[browser_daemon] 🔄 polling alive: {frame_count} frames sent, qlen={qlen}, stop={_screencast_stop}", flush=True)
                     time.sleep(0.15)  # ~6fps 폴링
                 except (BrokenPipeError, ConnectionResetError):
+                    print(f"[browser_daemon] ❌ SSE pipe broken after {frame_count} frames", flush=True)
                     break
             print(f"[browser_daemon] 📹 큐 폴링 종료 ({frame_count}프레임)", flush=True)
             try:
@@ -597,7 +696,7 @@ class BrowserHandler(BaseHTTPRequestHandler):
             ws.recv()
 
             # 주기적 캡처 (단계적 전환: DuckDuckGo → 실제 페이지 → DuckDuckGo)
-            deadline = time.time() + 15
+            deadline = time.time() + 10
             frame_count = 0
             capture_id = 100
             last_buf_seq = _screencast_buffer.get("seq", 0)

@@ -628,7 +628,16 @@ def _greeting(user_name: str = "") -> str:
     from zoneinfo import ZoneInfo
     now = datetime.now(ZoneInfo("Asia/Seoul"))
     hour = now.hour
-    lang = get_language()
+
+    # config.json에서 직접 언어를 읽어옴 (서버 i18n 캐시는 시작 시 고정되므로)
+    try:
+        import json as _json
+        _cfg_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config.json")
+        with open(_cfg_path, "r", encoding="utf-8-sig") as _f:
+            _cfg = _json.load(_f)
+        lang = _cfg.get("assistant", {}).get("language", "ko")
+    except Exception:
+        lang = get_language()
 
     weekday_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     weekday_ko = ["월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일"]
@@ -681,7 +690,8 @@ def _greeting(user_name: str = "") -> str:
         )
     else:
         instruction = (
-            "Please greet the user warmly based on the current time of day. "
+            "⚠ You MUST respond in English. Do NOT use Korean.\n"
+            "Please greet the user warmly in English based on the current time of day. "
             "Be natural and concise (2-3 sentences). Mention relevant context like time of day or day of week. "
             "If it's a holiday or weekend, acknowledge it."
         )

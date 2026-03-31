@@ -608,7 +608,9 @@
         "vm_not_running": "Error: Ubuntu VM is not running."
     },
     "notification": {
-        "sent": "✅ Notification sent: {results}"
+        "sent": "✅ Notification sent: {results}",
+        "send_done": "✅ Message sent.",
+        "no_channel": "❌ No active notification channels. (Check clients settings in config.json)"
     },
     "memory": {
         "mtm_format": "- **{key}**: {value} [MTM, accessed:{count}]",

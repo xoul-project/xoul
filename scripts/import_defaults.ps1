@@ -130,9 +130,19 @@ if (Test-Path $wfDistPath) {
                 # 코드 스텝은 dict로 전달
                 $prompts += @{ type = "code"; code_name = $step.content; content = $step.content }
             } else {
-                # 프롬프트 스텝은 로컬라이즈된 텍스트
-                $stepContent = Get-Localized $step.content
-                $prompts += $stepContent
+                # 프롬프트 스텝: i18n dict 보존 (런타임 언어 resolve 지원)
+                $rawContent = $step.content
+                if ($rawContent -is [PSCustomObject] -and ($rawContent.PSObject.Properties["ko"] -or $rawContent.PSObject.Properties["en"])) {
+                    # i18n dict → 그대로 보존
+                    $contentDict = @{}
+                    foreach ($prop in $rawContent.PSObject.Properties) {
+                        $contentDict[$prop.Name] = $prop.Value
+                    }
+                    $prompts += @{ type = "prompt"; content = $contentDict }
+                } else {
+                    $stepContent = Get-Localized $rawContent
+                    $prompts += $stepContent
+                }
             }
         }
 

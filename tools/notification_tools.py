@@ -37,4 +37,4 @@ def tool_send_notification(message: str, title: str = "") -> str:
 
     if results:
         return t("notification.sent", results=", ".join(results))
-    return "❌ 활성화된 알림 채널이 없습니다. (config.json에서 clients 설정 확인)"
+    return t("notification.no_channel")

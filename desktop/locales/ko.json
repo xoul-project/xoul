@@ -40,7 +40,13 @@
         "param_remember": "🔒 기억하기 (Remember)",
         "param_cancel": "취소",
         "param_submit": "✅ 실행",
-        "auto_greeting": "[AUTO_GREETING] 사용자가 데스크탑 앱에 접속했습니다. greeting 도구를 호출하여 현재 시각에 맞는 자연스러운 인사말을 생성해주세요."
+        "auto_greeting": "[AUTO_GREETING] 사용자가 데스크탑 앱에 접속했습니다. greeting 도구를 호출하여 현재 시각에 맞는 자연스러운 인사말을 생성해주세요.",
+        "model_pulling": "모델 다운로드 중: {model} ...",
+        "model_pull_done": "모델 준비 완료: {model}",
+        "model_pull_fail": "모델 다운로드 실패: {model}",
+        "config_syncing": "설정을 서버에 동기화 중...",
+        "config_sync_done": "설정 동기화 완료. 서버가 재시작되었습니다.",
+        "config_sync_fail": "설정 동기화 실패. deploy.ps1 -ConfigOnly를 수동 실행하세요."
     },
     "input_bar": {
         "desc": "Spotlight 스타일 입력바",

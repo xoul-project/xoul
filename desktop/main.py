@@ -564,13 +564,68 @@ class App:
         dlg.exec()
 
     def _on_settings_saved(self):
-        """설정 저장 후 config 리로드"""
+        """설정 저장 후 config 리로드 + VM 동기화"""
+        old_config = self.config
         self.config = load_config()
         server_cfg = self.config.get("server", {})
         port = server_cfg.get("port", 3000)
         api_key = server_cfg.get("api_key", "")
         self.api = ApiClient(f"http://127.0.0.1:{port}", api_key)
-        self._check_server()
+
+        # 모델 변경 감지
+        old_model = old_config.get("llm", {}).get("ollama_model", "")
+        new_model = self.config.get("llm", {}).get("ollama_model", "")
+        model_changed = old_model and new_model and old_model != new_model
+
+        # 동기화 시작 메시지 (메인 스레드에서 안전하게 호출)
+        self.chat_window.add_bot_message(
+            f"🔄 {i18n.t('main.config_syncing')}"
+        )
+
+        # 모든 무거운 작업을 백그라운드 스레드에서 실행
+        import threading
+
+        def _sync():
+            import subprocess
+
+            # 이전 모델 명시적 언로드 (VRAM 확보)
+            if model_changed:
+                try:
+                    subprocess.run(
+                        ["ollama", "stop", old_model],
+                        capture_output=True, timeout=10,
+                    )
+                    print(f"[SETTINGS] Unloaded old model: {old_model}", flush=True)
+                except Exception as e:
+                    print(f"[SETTINGS] Failed to unload {old_model}: {e}", flush=True)
+
+            # VM에 config 동기화 (deploy -ConfigOnly)
+            try:
+                deploy_script = os.path.join(PROJECT_ROOT, "scripts", "deploy.ps1")
+                result = subprocess.run(
+                    ["powershell", "-ExecutionPolicy", "Bypass",
+                     "-File", deploy_script, "-ConfigOnly"],
+                    capture_output=True, text=True, timeout=60,
+                    cwd=PROJECT_ROOT,
+                )
+                if result.returncode == 0:
+                    QTimer.singleShot(0, lambda: self.chat_window.add_bot_message(
+                        f"✅ {i18n.t('main.config_sync_done')}"
+                    ))
+                else:
+                    QTimer.singleShot(0, lambda: self.chat_window.add_bot_message(
+                        f"⚠️ {i18n.t('main.config_sync_fail')}"
+                    ))
+            except Exception as e:
+                QTimer.singleShot(0, lambda: self.chat_window.add_bot_message(
+                    f"⚠️ deploy error: {e}"
+                ))
+
+            import time
+            time.sleep(3)
+            QTimer.singleShot(0, self._check_server)
+
+        threading.Thread(target=_sync, daemon=True).start()
 
     def _reset_session(self):
         """세션 초기화"""

@@ -20,7 +20,7 @@ import ast
 import sqlite3
 from datetime import datetime
 from .system_tools import tool_run_command
-from i18n import t as _t
+from i18n import t as _t, get_language as _get_lang
 
 
 # ─────────────────────────────────────────────
@@ -29,6 +29,14 @@ from i18n import t as _t
 
 WF_DB_PATH = "/root/.xoul/workflows.db"
 _wf_db_conn = None
+
+
+def _resolve_i18n(val):
+    """i18n dict {"ko": "...", "en": "..."} → 현재 언어 문자열로 resolve"""
+    if isinstance(val, dict) and ("ko" in val or "en" in val):
+        lang = _get_lang()
+        return val.get(lang, val.get("en", val.get("ko", str(val))))
+    return val if isinstance(val, str) else str(val) if val else ""
 
 
 def _get_db():
@@ -394,7 +402,7 @@ def _step_summary(step) -> str:
     """스텝을 간결한 한 줄 요약으로 변환 (코드 전체 포함 안 함)"""
     if isinstance(step, dict):
         stype = step.get('type', 'prompt')
-        content = step.get('content', '')
+        content = _resolve_i18n(step.get('content', ''))
         if stype == 'code':
             code_name = step.get('code_name', '')
             if code_name:
@@ -640,7 +648,13 @@ def _format_chunk(steps: list, chunk_num: int, total_chunks: int,
     for i, step in enumerate(steps):
         step_lines.append(_format_step(step, step_offset + i))
 
-    return "Generate answer for below Users's Instruction. Use previous information if it is retrieved previously(in above context) and do not call tools to get same information which is already stated in past. Focus on only current step.\n\n" + "\n".join(step_lines)
+    return (
+        "Generate answer for below Users's Instruction. Use previous information if it is retrieved previously(in above context) and do not call tools to get same information which is already stated in past. Focus on only current step.\n"
+        "\n⚠ WORKFLOW TOOL RULES:\n"
+        "- To send messages/notifications, use send_notification (API-based). Do NOT use host_open_app to open messenger apps (KakaoTalk, Telegram, Discord, Slack, etc.).\n"
+        "- host_open_app is ONLY for launching desktop productivity apps (e.g., Chrome, Excel, VSCode) when explicitly requested by a workflow step.\n"
+        "\n" + "\n".join(step_lines)
+    )
 
 
 def _execute_workflow(db, row) -> str:
@@ -706,7 +720,7 @@ def _execute_workflow(db, row) -> str:
 def _format_step(step: dict, step_num: int) -> str:
     """단일 워크플로우 스텝을 지시문 텍스트로 변환"""
     stype = step.get("type", "prompt")
-    content = step.get("content", "")
+    content = _resolve_i18n(step.get("content", ""))
 
     # code_name 참조: run_stored_code로 실행 지시
     if stype == "code" and step.get("code_name"):
@@ -917,7 +931,7 @@ def view_workflow(name: str) -> str:
     lines.append("|---|------|------|")
     for i, step in enumerate(steps, 1):
         stype = step.get("type", "prompt")
-        content = step.get("content", "")
+        content = _resolve_i18n(step.get("content", ""))
         if stype == "code":
             code_name = step.get("code_name", "")
             if code_name:

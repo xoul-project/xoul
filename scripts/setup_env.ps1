@@ -206,7 +206,7 @@ if ($currentKeepAlive -ne "-1") {
     Write-Host "  ✅ OLLAMA_KEEP_ALIVE already set (-1)" -ForegroundColor Green
 }
 
-# 동시 모델 로딩 설정 (메인 + 요약 + 임베딩 = 3개 동시 실행)
+# 동시 모델 로딩 설정 (메인 GPU + CPU 요약 + 임베딩 = 3개)
 $currentMaxModels = [System.Environment]::GetEnvironmentVariable("OLLAMA_MAX_LOADED_MODELS", "User")
 if ($currentMaxModels -ne "3") {
     [System.Environment]::SetEnvironmentVariable("OLLAMA_MAX_LOADED_MODELS", "3", "User")
@@ -300,39 +300,35 @@ if ($useCommercial) {
     Write-Host "  ┌──────────────────────────────────────────────┐" -ForegroundColor Magenta
     Write-Host "  │  $(T 'setup.commercial_title')                │" -ForegroundColor Magenta
     Write-Host "  └──────────────────────────────────────────────┘" -ForegroundColor Magenta
-    Write-Host ""
-    Write-Host "  ── Anthropic ──" -ForegroundColor Yellow
-    Write-Host "   1. Claude Opus 4       (claude-opus-4-6)" -ForegroundColor White
-    Write-Host "   2. Claude Sonnet 4     (claude-sonnet-4-6)" -ForegroundColor White
-    Write-Host "   3. Claude Haiku 4      (claude-haiku-4-6)" -ForegroundColor White
-    Write-Host "  ── OpenAI (GPT-5) ──" -ForegroundColor Yellow
-    Write-Host "   4. GPT-5.2             (gpt-5.2)" -ForegroundColor White
-    Write-Host "   5. GPT-5.2 Pro         (gpt-5.2-pro)" -ForegroundColor White
-    Write-Host "   6. GPT-5 Mini          (gpt-5-mini)" -ForegroundColor White
-    Write-Host "  ── Google ──" -ForegroundColor Yellow
-    Write-Host "   7. Gemini 3.1 Pro      (gemini-3.1-pro)" -ForegroundColor White
-    Write-Host "   8. Gemini 3.1 Flash    (gemini-3.1-flash)" -ForegroundColor White
-    Write-Host "  ── DeepSeek ──" -ForegroundColor Yellow
-    Write-Host "   9. DeepSeek R1         (deepseek-r1)" -ForegroundColor White
-    Write-Host "  10. DeepSeek V3.2       (deepseek-v3.2)" -ForegroundColor White
-    Write-Host "  ── xAI ──" -ForegroundColor Yellow
-    Write-Host "  11. Grok 3              (grok-3)" -ForegroundColor White
-    Write-Host "  12. Grok 3 Mini         (grok-3-mini)" -ForegroundColor White
-    Write-Host "  ── Mistral ──" -ForegroundColor Yellow
-    Write-Host "  13. Mistral Large        (mistral-large-latest)" -ForegroundColor White
-    Write-Host "  14. Mistral Small        (mistral-small-latest)" -ForegroundColor White
+    # Commercial 모델 목록 (models.json에서 로드)
+    $cmModelsJsonPath = Join-Path $ProjectDir "models.json"
+    $cmModelsData = [System.IO.File]::ReadAllText($cmModelsJsonPath, [System.Text.Encoding]::UTF8) | ConvertFrom-Json
+    $cmEntries = @()
+    foreach ($entry in $cmModelsData.commercial) {
+        $cmEntries += $entry
+    }
+
+    # 모델 목록 표시
+    $cmModelItems = @()
+    foreach ($entry in $cmEntries) {
+        if ($entry.group) {
+            Write-Host "  ── $($entry.group) ──" -ForegroundColor Yellow
+        } else {
+            $num = "$($entry.num).".PadRight(4)
+            $label = "$($entry.label)".PadRight(22)
+            Write-Host "  $num$label($($entry.model))" -ForegroundColor White
+            $cmModelItems += $entry
+        }
+    }
     Write-Host ""
 
     # 기존 모델 번호 찾기
     $defaultCmChoice = "2"
-    $modelToNum = @{
-        "claude-opus-4-6"="1"; "claude-sonnet-4-6"="2"; "claude-haiku-4-6"="3";
-        "gpt-5.2"="4"; "gpt-5.2-pro"="5"; "gpt-5-mini"="6";
-        "gemini-3.1-pro"="7"; "gemini-3.1-flash"="8";
-        "deepseek-r1"="9"; "deepseek-v3.2"="10";
-        "grok-3"="11"; "grok-3-mini"="12";
-        "mistral-large-latest"="13"; "mistral-small-latest"="14"
+    $modelToNum = @{}
+    foreach ($item in $cmModelItems) {
+        $modelToNum[$item.model] = $item.num
     }
+    $cmMaxNum = ($cmModelItems | Measure-Object -Property num -Maximum).Maximum
     if ($existingModel -and $modelToNum.ContainsKey($existingModel)) {
         $defaultCmChoice = $modelToNum[$existingModel]
         Write-Host (T "setup.current_setting" @{model=$existingModel}) -ForegroundColor DarkCyan
@@ -341,28 +337,19 @@ if ($useCommercial) {
     do {
         $cmChoice = Safe-ReadHost (T "setup.commercial_prompt")
         if (-not $cmChoice) { $cmChoice = $defaultCmChoice }
-        $cmValid = $cmChoice -match '^\d+$' -and [int]$cmChoice -ge 1 -and [int]$cmChoice -le 14
+        $cmValid = $cmChoice -match '^\d+$' -and [int]$cmChoice -ge 1 -and [int]$cmChoice -le [int]$cmMaxNum
         if (-not $cmValid) {
             Write-Host (T "setup.commercial_invalid") -ForegroundColor Yellow
         }
     } while (-not $cmValid)
 
-    switch ($cmChoice) {
-        "1"  { $cmProvider="claude";  $cmBaseUrl="https://api.anthropic.com/v1";                    $cmModel="claude-opus-4-6";      $cmLabel="Claude Opus 4" }
-        "2"  { $cmProvider="claude";  $cmBaseUrl="https://api.anthropic.com/v1";                    $cmModel="claude-sonnet-4-6";    $cmLabel="Claude Sonnet 4" }
-        "3"  { $cmProvider="claude";  $cmBaseUrl="https://api.anthropic.com/v1";                    $cmModel="claude-haiku-4-6";     $cmLabel="Claude Haiku 4" }
-        "4"  { $cmProvider="openai";  $cmBaseUrl="https://api.openai.com/v1";                       $cmModel="gpt-5.2";              $cmLabel="GPT-5.2" }
-        "5"  { $cmProvider="openai";  $cmBaseUrl="https://api.openai.com/v1";                       $cmModel="gpt-5.2-pro";          $cmLabel="GPT-5.2 Pro" }
-        "6"  { $cmProvider="openai";  $cmBaseUrl="https://api.openai.com/v1";                       $cmModel="gpt-5-mini";           $cmLabel="GPT-5 Mini" }
-        "7"  { $cmProvider="google";  $cmBaseUrl="https://generativelanguage.googleapis.com/v1beta"; $cmModel="gemini-3.1-pro";       $cmLabel="Gemini 3.1 Pro" }
-        "8"  { $cmProvider="google";  $cmBaseUrl="https://generativelanguage.googleapis.com/v1beta"; $cmModel="gemini-3.1-flash";     $cmLabel="Gemini 3.1 Flash" }
-        "9"  { $cmProvider="deepseek";$cmBaseUrl="https://api.deepseek.com";                        $cmModel="deepseek-r1";          $cmLabel="DeepSeek R1" }
-        "10" { $cmProvider="deepseek";$cmBaseUrl="https://api.deepseek.com";                        $cmModel="deepseek-v3.2";        $cmLabel="DeepSeek V3.2" }
-        "11" { $cmProvider="xai";     $cmBaseUrl="https://api.x.ai/v1";                             $cmModel="grok-3";               $cmLabel="Grok 3" }
-        "12" { $cmProvider="xai";     $cmBaseUrl="https://api.x.ai/v1";                             $cmModel="grok-3-mini";          $cmLabel="Grok 3 Mini" }
-        "13" { $cmProvider="mistral"; $cmBaseUrl="https://api.mistral.ai/v1";                       $cmModel="mistral-large-latest";  $cmLabel="Mistral Large" }
-        "14" { $cmProvider="mistral"; $cmBaseUrl="https://api.mistral.ai/v1";                       $cmModel="mistral-small-latest";  $cmLabel="Mistral Small" }
-    }
+    # 선택한 모델 찾기 (models.json에서 로드)
+    $selectedCm = $cmModelItems | Where-Object { $_.num -eq $cmChoice }
+    if (-not $selectedCm) { $selectedCm = $cmModelItems[0] }
+    $cmProvider = $selectedCm.provider
+    $cmBaseUrl  = $selectedCm.base_url
+    $cmModel    = $selectedCm.model
+    $cmLabel    = $selectedCm.label
 
     Write-Host (T "setup.commercial_selected" @{model=$cmLabel; detail=$cmModel}) -ForegroundColor Cyan
     Write-Host ""
@@ -528,15 +515,19 @@ if ($gpuMode -and $nv) {
     } catch { $vramGB = 0 }
 }
 
-# 모델 목록 (VRAM 크기순 정렬)
-$models = @(
-    @{ num="1"; name="Qwen3:4B-Q4KM";            vram=4;  scoreNum=60; speed="Very Fast"; quality="Very Low"; descKey="model_desc_1"; tag="zendar79/qwen3:4b-q4km" }
-    @{ num="2"; name="Nemotron-3-Nano:4B-Q8";     vram=6;  scoreNum=70; speed="Fast";      quality="Low";      descKey="model_desc_2"; tag="nemotron-3-nano:4b-q8_0" }
-    @{ num="3"; name="Nemotron-3-Nano:4B-BF16";   vram=8;  scoreNum=75; speed="Fast";      quality="Mid";      descKey="model_desc_3"; tag="nemotron-3-nano:4b-bf16" }
-    @{ num="4"; name="Qwen3-VL-8B-Instruct";      vram=12; scoreNum=80; speed="Fast";      quality="Mid";      descKey="model_desc_4"; tag="adelnazmy2002/Qwen3-VL-8B-Instruct" }
-    @{ num="5"; name="GPT-oss-20B";               vram=13; scoreNum=88; speed="Fast";      quality="Good";     descKey="model_desc_5"; tag="gpt-oss:20b" }
-    @{ num="6"; name="Nemotron-Cascade-2:30B";    vram=20; scoreNum=95; speed="Little Slow";quality="Nice";     descKey="model_desc_6"; tag="nemotron-cascade-2:30b" }
-)
+# 모델 목록 (models.json — single source of truth)
+$modelsJsonPath = Join-Path $ProjectDir "models.json"
+$modelsData = [System.IO.File]::ReadAllText($modelsJsonPath, [System.Text.Encoding]::UTF8) | ConvertFrom-Json
+$models = @()
+foreach ($m in $modelsData.local) {
+    $models += @{
+        num=$m.num; name=$m.name; vram=$m.vram; scoreNum=$m.score;
+        speed=$m.speed; quality=$m.quality; descKey=$m.descKey; tag=$m.tag;
+        temp=$m.temp; topP=$m.topP; ctx=$m.ctx; maxTokens=$m.maxTokens
+    }
+}
+$modelCount = $models.Count
+$modelNums = 1..$modelCount | ForEach-Object { "$_" }
 
 # VRAM에 맞는 모델 중 가장 높은 점수 → 동점이면 낮은 VRAM 추천
 $recommendedNum = "1"  # 기본: 가장 작은 모델
@@ -581,79 +572,29 @@ Write-Host ""
 do {
     $modelChoice = Safe-ReadHost (T "setup.model_prompt")
     if (-not $modelChoice) { $modelChoice = $recommendedNum }
-    if ($modelChoice -notin @("1","2","3","4","5","6")) {
+    if ($modelChoice -notin $modelNums) {
         Write-Host (T "setup.model_invalid") -ForegroundColor Yellow
     }
-} while ($modelChoice -notin @("1","2","3","4","5","6"))
+} while ($modelChoice -notin $modelNums)
 
-# 모델별 최적 설정
-switch ($modelChoice) {
-    "1" {
-        $modelName = "Qwen3:4B-Q4KM"
-        $modelFile = "qwen3-4b-q4km.gguf"
-        $modelUrl = ""
-        $modelTemp = 0.7; $modelTopP = 0.9; $modelCtx = 32768; $modelMaxTokens = 32768
-        Write-Host (T "setup.model_selected" @{model="Qwen3:4B-Q4KM"; detail="Ollama, VRAM ~4GB, ctx=32K"}) -ForegroundColor Cyan
-    }
-    "2" {
-        $modelName = "Nemotron-3-Nano:4B-Q8"
-        $modelFile = "nemotron-3-nano-4b-q8.gguf"
-        $modelUrl = ""
-        $modelTemp = 0.6; $modelTopP = 0.95; $modelCtx = 32768; $modelMaxTokens = 32768
-        Write-Host (T "setup.model_selected" @{model="Nemotron-3-Nano:4B-Q8"; detail="Ollama, VRAM ~6GB, ctx=32K"}) -ForegroundColor Cyan
-    }
-    "3" {
-        $modelName = "Nemotron-3-Nano:4B-BF16"
-        $modelFile = "nemotron-3-nano:4b-bf16.gguf"
-        $modelUrl = ""
-        $modelTemp = 0.6; $modelTopP = 0.95; $modelCtx = 32768; $modelMaxTokens = 32768
-        Write-Host (T "setup.model_selected" @{model="Nemotron-3-Nano:4B-BF16"; detail="Ollama, VRAM ~8GB, ctx=32K"}) -ForegroundColor Cyan
-    }
-    "4" {
-        $modelName = "Qwen3-VL-8B-Instruct"
-        $modelFile = "qwen3-vl-8b-instruct.gguf"
-        $modelUrl = ""
-        $modelTemp = 0.7; $modelTopP = 0.9; $modelCtx = 32768; $modelMaxTokens = 32768
-        Write-Host (T "setup.model_selected" @{model="Qwen3-VL-8B-Instruct"; detail="Ollama, VRAM ~12GB, ctx=32K"}) -ForegroundColor Cyan
-    }
-    "5" {
-        $modelName = "gpt-oss-20b"
-        $modelFile = "gpt-oss-20b-q4.gguf"
-        $modelUrl = ""
-        $modelTemp = 1; $modelTopP = 1; $modelCtx = 32768; $modelMaxTokens = 32768
-        Write-Host (T "setup.model_selected" @{model="GPT-oss-20B"; detail="Ollama, VRAM ~13GB, ctx=32K"}) -ForegroundColor Cyan
-    }
-    "6" {
-        $modelName = "Nemotron-Cascade-2:30B"
-        $modelFile = "nemotron-cascade-2-30b.gguf"
-        $modelUrl = ""
-        $modelTemp = 0.6; $modelTopP = 0.95; $modelCtx = 32768; $modelMaxTokens = 32768
-        Write-Host (T "setup.model_selected" @{model="Nemotron-Cascade-2:30B"; detail="Ollama, VRAM ~20GB, ctx=32K"}) -ForegroundColor Cyan
-    }
-
-    default {
-        $modelName = "Qwen3:4B-Q4KM"
-        $modelFile = "qwen3-4b-q4km.gguf"
-        $modelUrl = ""
-        $modelTemp = 0.7; $modelTopP = 0.9; $modelCtx = 32768; $modelMaxTokens = 32768
-        Write-Host (T "setup.model_selected" @{model="Qwen3:4B-Q4KM"; detail="Ollama, VRAM ~4GB, ctx=32K"}) -ForegroundColor Cyan
-    }
-}
+# 모델별 최적 설정 (models.json에서 로드)
+$selectedModel = $models | Where-Object { $_.num -eq $modelChoice }
+if (-not $selectedModel) { $selectedModel = $models[0] }
+$modelName = $selectedModel.name
+$modelFile = ($selectedModel.name -replace '[:\s/]', '-').ToLower() + ".gguf"
+$modelUrl = ""
+$modelTemp = $selectedModel.temp
+$modelTopP = $selectedModel.topP
+$modelCtx = $selectedModel.ctx
+$modelMaxTokens = $selectedModel.maxTokens
+Write-Host (T "setup.model_selected" @{model=$selectedModel.name; detail="Ollama, VRAM ~$($selectedModel.vram)GB, ctx=$([math]::Floor($selectedModel.ctx/1024))K"}) -ForegroundColor Cyan
 
 $modelPath = Join-Path $modelsDir $modelFile
 
 # 모델 다운로드 / pull
 if ($engineType -eq "ollama") {
-    # Ollama 모델 태그 매핑
-    $ollamaModel = switch ($modelChoice) {
-        "1" { "zendar79/qwen3:4b-q4km" }
-        "2" { "nemotron-3-nano:4b-q8_0" }
-        "3" { "nemotron-3-nano:4b-bf16" }
-        "4" { "adelnazmy2002/Qwen3-VL-8B-Instruct" }
-        "5" { "gpt-oss:20b" }
-        "6" { "nemotron-cascade-2:30b" }
-        default { "zendar79/qwen3:4b-q4km" }
-    }
+    # Ollama 모델 태그 (models.json에서 로드)
+    $ollamaModel = $selectedModel.tag
     Write-Host (T "setup.model_pulling" @{model=$ollamaModel}) -ForegroundColor Yellow
     $pullSuccess = $false
     for ($attempt = 1; $attempt -le 3; $attempt++) {
@@ -1092,8 +1033,14 @@ Write-Host ""
 Write-Host "  $(T 'setup.search_desc')" -ForegroundColor White
 Write-Host "  $(T 'setup.search_free')" -ForegroundColor Green
 Write-Host ""
-$searchSetup = Safe-ReadHost "  $(T 'setup.search_prompt') (y/n, default: y)"
-if ($searchSetup -ne "n" -and $searchSetup -ne "N") {
+if ($currentTavilyKey) {
+    $searchSetup = Safe-ReadHost "  $(T 'setup.search_prompt') (y/n, default: n)"
+    $doSearchSetup = ($searchSetup -eq "y" -or $searchSetup -eq "Y")
+} else {
+    $searchSetup = Safe-ReadHost "  $(T 'setup.search_prompt') (y/n, default: y)"
+    $doSearchSetup = ($searchSetup -ne "n" -and $searchSetup -ne "N")
+}
+if ($doSearchSetup) {
     Write-Host ""
     Write-Host "  $(T 'setup.search_guide_1')" -ForegroundColor Cyan
     Write-Host "  $(T 'setup.search_guide_2')" -ForegroundColor White
@@ -1512,9 +1459,10 @@ if ($desktopWasRunning) {
 # ─────────────────────────────────────────────
 $startupDir = [System.Environment]::GetFolderPath("Startup")
 $shortcutPath = Join-Path $startupDir "Xoul.lnk"
+$autoStartBat = Join-Path $ProjectDir "scripts\auto_start.bat"
 $xoulBat = Join-Path $ProjectDir "desktop\Xoul.bat"
 
-if (Test-Path $xoulBat) {
+if (Test-Path $autoStartBat) {
     $alreadyRegistered = Test-Path $shortcutPath
     if ($alreadyRegistered) {
         Write-Host (T "setup.autostart_already") -ForegroundColor Green
@@ -1533,9 +1481,9 @@ if (Test-Path $xoulBat) {
             try {
                 $ws = New-Object -ComObject WScript.Shell
                 $sc = $ws.CreateShortcut($shortcutPath)
-                $sc.TargetPath = $xoulBat
+                $sc.TargetPath = $autoStartBat
                 $sc.WorkingDirectory = $ProjectDir
-                $sc.Description = "Xoul Desktop Client"
+                $sc.Description = "Xoul Auto Start (VM + Desktop)"
                 $sc.WindowStyle = 7  # Minimized
                 $sc.Save()
                 [System.Runtime.InteropServices.Marshal]::ReleaseComObject($ws) | Out-Null
@@ -1547,6 +1495,13 @@ if (Test-Path $xoulBat) {
             Write-Host (T "setup.autostart_skipped") -ForegroundColor Gray
         }
     }
+}
+
+# Desktop 앱이 실행 중이 아니었으면 지금 시작
+if (-not $desktopWasRunning -and (Test-Path $xoulBat)) {
+    Write-Host (T "setup.desktop_restarting") -ForegroundColor Cyan
+    Start-Process -FilePath $xoulBat -WorkingDirectory $ProjectDir -WindowStyle Minimized
+    Write-Host (T "setup.desktop_restarted") -ForegroundColor Green
 }
 
 Write-Host ""

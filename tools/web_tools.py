@@ -271,8 +271,7 @@ def tool_web_search(query: str) -> str:
             line += f"\n   {r['snippet']}"
         output.append(line)
 
-    # 브라우즈 전략: Tavily는 상위 4개만 browse (나머지는 Tavily raw_content 사용)
-    #                DDG/Google은 상위 4개 browse
+    # 브라우즈 전략: 상위 4개 URL browse (병렬 실행)
     browse_count = min(4, len(all_urls))
     print(f"[web_search] all_urls: {len(all_urls)}, browse: {browse_count} (tavily={used_tavily})", flush=True)
 
@@ -284,34 +283,49 @@ def tool_web_search(query: str) -> str:
         import time as _time
 
         def _browse_one(url):
+            """경량 browse: daemon(8s) → http_get(8s). SSH 폴백 생략하여 속도 확보."""
             t0 = _time.time()
+            # 1차: browser daemon (SSH 폴백 없는 경량 호출)
             try:
-                result = tool_browse_url(url)
-                elapsed = _time.time() - t0
-                print(f"[web_search] 🌐 browse {url[:60]} → {len(result) if result else 0}차 ({elapsed:.1f}s)", flush=True)
-                if result and not result.startswith("❌") and \
-                   not result.startswith("⏱") and len(result) > 100:
-                    return (url, result[:4000])
+                import urllib.request as _ur
+                import json as _js
+                encoded = urllib.parse.quote(url, safe='')
+                daemon_url = f"http://127.0.0.1:9223/fetch?url={encoded}"
+                req = _ur.Request(daemon_url)
+                with _ur.urlopen(req, timeout=15) as resp:
+                    data = _js.loads(resp.read().decode("utf-8"))
+                    content = data.get("content", "")
+                    screenshot = data.get("screenshot", "")
+                    elapsed = _time.time() - t0
+                    if content and not content.startswith("❌") and len(content) > 100:
+                        print(f"[web_search] 🌐 daemon {url[:60]} → {len(content)}자 ({elapsed:.1f}s) ss={len(screenshot)}B", flush=True)
+                        return (url, content[:4000], screenshot)
             except Exception:
                 pass
+            # 2차: 직접 HTTP GET (빠른 폴백)
             try:
-                html = _http_get(url, timeout=10)
+                html = _http_get(url, timeout=5)
                 text = _clean_html(html)
                 elapsed = _time.time() - t0
-                print(f"[web_search] 🌐 http_get {url[:60]} → {len(text) if text else 0}차 ({elapsed:.1f}s)", flush=True)
+                print(f"[web_search] 🌐 http_get {url[:60]} → {len(text) if text else 0}자 ({elapsed:.1f}s)", flush=True)
                 if text and len(text) > 100:
-                    return (url, text[:4000])
+                    return (url, text[:4000], "")
             except Exception:
                 pass
             return None
 
         # 병렬 browse (url_idx로 그리드 슬롯 구분)
+        screenshots = []  # [(url_idx, screenshot_base64), ...]
         with ThreadPoolExecutor(max_workers=4) as pool:
-            futures = {pool.submit(_browse_one, url): url for url in browse_urls}
+            futures = {pool.submit(_browse_one, url): (i, url) for i, url in enumerate(browse_urls)}
             for f in as_completed(futures):
+                idx, url = futures[f]
                 result = f.result()
                 if result:
-                    browsed.append(result)
+                    url, content, ss = result
+                    browsed.append((url, content))
+                    if ss:
+                        screenshots.append((idx, ss))
 
     # Tavily raw_content로 본문 보충 (browse 못한 URL + 나머지 URL)
     if used_tavily:
@@ -338,7 +352,12 @@ def tool_web_search(query: str) -> str:
     elif not browsed:
         output.append(_t("web.extract_fail"))
 
-    return "\n\n".join(output)
+    text_result = "\n\n".join(output)
+
+    # 스크린샷이 있으면 dict로 반환 (server.py가 browser_frame 이벤트 생성)
+    if screenshots:
+        return {"text": text_result, "__screenshots__": screenshots}
+    return text_result
 
 
 def _extract_metadata(html: str) -> str:
@@ -621,7 +640,7 @@ def tool_browse_url(url: str, wait: int = 3) -> str:
     try:
         daemon_url = f"http://127.0.0.1:9223/fetch?url={encoded_url}"
         req = urllib.request.Request(daemon_url)
-        with urllib.request.urlopen(req, timeout=12) as resp:
+        with urllib.request.urlopen(req, timeout=8) as resp:
             data = _json.loads(resp.read().decode("utf-8"))
             content = data.get("content", "")
             if content and not content.startswith("❌") and len(content) > 50:

@@ -608,7 +608,9 @@
         "vm_not_running": "오류: Ubuntu VM이 실행되고 있지 않습니다."
     },
     "notification": {
-        "sent": "✅ 알림 전송 완료: {results}"
+        "sent": "✅ 알림 전송 완료: {results}",
+        "send_done": "✅ 메시지 전송 완료.",
+        "no_channel": "❌ 활성화된 알림 채널이 없습니다. (config.json에서 clients 설정 확인)"
     },
     "memory": {
         "mtm_format": "- **{key}**: {value} [MTM, 접근:{count}]",

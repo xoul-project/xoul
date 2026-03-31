@@ -166,38 +166,39 @@ QPushButton#CancelBtn:hover {{
 """
 
 # ─────────────────────────────────────────────
-# Commercial 모델 정의
+# 모델 定義 (models.json — single source of truth)
 # ─────────────────────────────────────────────
-COMMERCIAL_MODELS = {
-    "── Anthropic ──": None,
-    "Claude Opus 4": {"provider": "claude", "base_url": "https://api.anthropic.com/v1", "model": "claude-opus-4-6"},
-    "Claude Sonnet 4": {"provider": "claude", "base_url": "https://api.anthropic.com/v1", "model": "claude-sonnet-4-6"},
-    "Claude Haiku 4": {"provider": "claude", "base_url": "https://api.anthropic.com/v1", "model": "claude-haiku-4-6"},
-    "── OpenAI (GPT-5) ──": None,
-    "GPT-5.2": {"provider": "openai", "base_url": "https://api.openai.com/v1", "model": "gpt-5.2"},
-    "GPT-5.2 Pro": {"provider": "openai", "base_url": "https://api.openai.com/v1", "model": "gpt-5.2-pro"},
-    "GPT-5 Mini": {"provider": "openai", "base_url": "https://api.openai.com/v1", "model": "gpt-5-mini"},
-    "── Google ──": None,
-    "Gemini 3.1 Pro": {"provider": "google", "base_url": "https://generativelanguage.googleapis.com/v1beta", "model": "gemini-3.1-pro"},
-    "Gemini 3.1 Flash": {"provider": "google", "base_url": "https://generativelanguage.googleapis.com/v1beta", "model": "gemini-3.1-flash"},
-    "── DeepSeek ──": None,
-    "DeepSeek R1": {"provider": "deepseek", "base_url": "https://api.deepseek.com", "model": "deepseek-r1"},
-    "DeepSeek V3.2": {"provider": "deepseek", "base_url": "https://api.deepseek.com", "model": "deepseek-v3.2"},
-    "── xAI ──": None,
-    "Grok 3": {"provider": "xai", "base_url": "https://api.x.ai/v1", "model": "grok-3"},
-    "Grok 3 Mini": {"provider": "xai", "base_url": "https://api.x.ai/v1", "model": "grok-3-mini"},
-    "── Mistral ──": None,
-    "Mistral Large": {"provider": "mistral", "base_url": "https://api.mistral.ai/v1", "model": "mistral-large-latest"},
-    "Mistral Small": {"provider": "mistral", "base_url": "https://api.mistral.ai/v1", "model": "mistral-small-latest"},
-}
+_MODELS_PATH = _PROJECT_DIR / "models.json"
 
-LOCAL_MODELS = [
-    {"label": "Qwen3-8B Q4  (~5GB)", "tag": "qwen3:8b"},
-    {"label": "Qwen3.5-4B   (~3GB)", "tag": "qwen3.5:4b"},
-    {"label": "Qwen3.5-9B   (~7GB)", "tag": "qwen3.5:9b"},
-    {"label": "GPT-oss-20B  (~15GB)", "tag": "gpt-oss:20b"},
-    {"label": "Qwen3.5-27B  (~18GB)", "tag": "qwen3.5:27b"},
-]
+
+def _load_models():
+    data = json.loads(_MODELS_PATH.read_text(encoding="utf-8"))
+
+    # Commercial models  →  OrderedDict {label: info_or_None}
+    commercial = {}
+    for entry in data.get("commercial", []):
+        if "group" in entry:
+            commercial[f"── {entry['group']} ──"] = None
+        else:
+            commercial[entry["label"]] = {
+                "provider": entry["provider"],
+                "base_url": entry["base_url"],
+                "model": entry["model"],
+            }
+
+    # Local models  →  list[{label, tag}]
+    local = []
+    for entry in data.get("local", []):
+        local.append({
+            "label": f"{entry['name']:<28} (~{entry['vram']}GB VRAM)",
+            "tag": entry["tag"],
+        })
+
+    return commercial, local
+
+
+COMMERCIAL_MODELS, LOCAL_MODELS = _load_models()
+
 
 
 # ─────────────────────────────────────────────
@@ -631,9 +632,10 @@ class SettingsDialog(QDialog):
             self._save_messenger()
             self._save_general()
             _save_config(self.cfg)
-            self.sig_saved.emit()
             QMessageBox.information(self, t("settings.save_ok_title"),
                                    t("settings.save_ok_msg"))
             self.accept()
+            # 팝업 닫힌 후 무거운 작업 (ollama stop, deploy 동기화) 시작
+            self.sig_saved.emit()
         except Exception as e:
             QMessageBox.critical(self, t("settings.save_error_title"), t("settings.save_error_msg", e=str(e)))

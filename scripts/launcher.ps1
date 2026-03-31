@@ -60,7 +60,7 @@ if ($ollamaProc) {
 }
 
 # Ollama 시작 (병렬 처리 + 멀티 모델 설정)
-$env:OLLAMA_NUM_PARALLEL = "1"
+$env:OLLAMA_NUM_PARALLEL = "4"
 $env:OLLAMA_MAX_LOADED_MODELS = "3"
 $env:OLLAMA_KEEP_ALIVE = "-1"
 $env:OLLAMA_FLASH_ATTENTION = "1"
@@ -100,6 +100,19 @@ if (-not $ollamaRunning) {
         Write-Host (T "launcher.model_ctx_set") -ForegroundColor Green
     } catch {
         Write-Host (T "launcher.model_ctx_fail") -ForegroundColor Yellow
+    }
+
+    # GPU 예열 — 모델을 VRAM에 미리 로드
+    $isLocal = ($config.llm.engine -eq "ollama")
+    if ($isLocal) {
+        Write-Host "  🔥 Warming up GPU ($ollamaModel)..." -NoNewline -ForegroundColor Yellow
+        try {
+            $body = @{ model = $ollamaModel; prompt = "hi"; stream = $false; options = @{ num_predict = 1 } } | ConvertTo-Json
+            $warmup = Invoke-RestMethod -Uri "http://127.0.0.1:11434/api/generate" -Method Post -Body $body -ContentType "application/json" -TimeoutSec 120
+            Write-Host " ✅ Model loaded in VRAM" -ForegroundColor Green
+        } catch {
+            Write-Host " ⚠ warmup skipped" -ForegroundColor Yellow
+        }
     }
 }
 

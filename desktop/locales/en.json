@@ -40,7 +40,13 @@
         "param_remember": "🔒 Remember",
         "param_cancel": "Cancel",
         "param_submit": "✅ Run",
-        "auto_greeting": "[AUTO_GREETING] The user has connected to the desktop app. Call the greeting tool to generate a natural greeting message appropriate for the current time."
+        "auto_greeting": "[AUTO_GREETING] The user has connected to the desktop app. Call the greeting tool to generate a natural greeting message appropriate for the current time.",
+        "model_pulling": "Downloading model: {model} ...",
+        "model_pull_done": "Model ready: {model}",
+        "model_pull_fail": "Model download failed: {model}",
+        "config_syncing": "Syncing settings to server...",
+        "config_sync_done": "Settings synced. Server has been restarted.",
+        "config_sync_fail": "Settings sync failed. Please run deploy.ps1 -ConfigOnly manually."
     },
     "input_bar": {
         "desc": "Spotlight-style input bar",

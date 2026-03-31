@@ -1024,20 +1024,20 @@ class ChatWindow(QWidget):
                 # 첫 URL 프레임: 그리드 컨테이너 생성 (4칸)
                 self._url_grid_active = True
                 self._url_grid_id = getattr(self, '_url_grid_id', 0) + 1
-                self._url_grid_slot = 0
-                self._url_grid_last_idx = url_idx
+                self._url_grid_base_idx = url_idx  # 첫 url_idx 기록
+                self._url_grid_slot_map = {}  # url_idx → slot
                 gid = self._url_grid_id
                 container_html = (
                     f'<div id="url-grid-{gid}" style="'
-                    'margin:6px 0; padding:6px; width:50%; '
+                    'margin:6px 0; padding:6px; width:70%; '
                     'background:#1e1e2e; border:1px solid #313244; border-radius:8px; '
                     'overflow:hidden; transition:all 0.5s ease;">'
                     '<div style="font-size:10px; color:#a6e3a1; margin-bottom:3px; '
                     'font-family:Segoe UI,sans-serif;">🔍 Search Results</div>'
                     f'<div id="url-grid-inner-{gid}" style="'
                     'display:grid; grid-template-columns:1fr 1fr; gap:3px;">'
-                    f'<img id="url-cell-{gid}-0" src="data:image/jpeg;base64,{base64_data}" '
-                    'style="width:100%; border-radius:3px; display:block; object-fit:contain; '
+                    f'<img id="url-cell-{gid}-0" src="" '
+                    'style="width:100%; border-radius:3px; display:none; object-fit:contain; '
                     'background:#181825;" />'
                     f'<img id="url-cell-{gid}-1" src="" '
                     'style="width:100%; border-radius:3px; display:none; object-fit:contain; '
@@ -1051,23 +1051,23 @@ class ChatWindow(QWidget):
                     '</div></div>'
                 )
                 self._append_html(container_html)
-            else:
-                gid = getattr(self, '_url_grid_id', 1)
-                last_idx = getattr(self, '_url_grid_last_idx', 0)
-                slot = getattr(self, '_url_grid_slot', 0)
 
-                if url_idx != last_idx:
-                    # 새 URL 시작 → 다음 슬롯으로 이동
-                    self._url_grid_last_idx = url_idx
-                    slot = min(slot + 1, 3)
-                    self._url_grid_slot = slot
+            gid = self._url_grid_id
+            slot_map = self._url_grid_slot_map
 
-                # 현재 슬롯에 이미지 업데이트 (같은 URL이면 같은 슬롯 갱신)
-                self._run_js(
-                    f"var img=document.getElementById('url-cell-{gid}-{slot}');"
-                    f"if(img){{img.src='data:image/jpeg;base64,{base64_data}';"
-                    f"img.style.display='block';}}"
-                )
+            # url_idx → slot 매핑 (처음 보는 url_idx면 다음 빈 슬롯 할당)
+            if url_idx not in slot_map:
+                next_slot = len(slot_map)
+                if next_slot >= 4:
+                    return  # 4개 슬롯 모두 사용 중
+                slot_map[url_idx] = next_slot
+
+            target_slot = slot_map[url_idx]
+            self._run_js(
+                f"var img=document.getElementById('url-cell-{gid}-{target_slot}');"
+                f"if(img){{img.src='data:image/jpeg;base64,{base64_data}';"
+                f"img.style.display='block';}}"
+            )
         else:
             # ── DuckDuckGo 프레임: 기존 큰 이미지 ──
             if not getattr(self, '_browser_preview_active', False):
@@ -1835,13 +1835,15 @@ class ChatWindow(QWidget):
                 with urllib.request.urlopen(req, timeout=10) as resp:
                     code_detail = _json.loads(resp.read().decode())
 
-                # 이름 해석 (i18n → 한국어)
+                # 이름 해석 (i18n → 현재 언어)
                 raw_name = code_detail.get("name", cid)
                 if isinstance(raw_name, str):
                     try:
                         parsed = _json.loads(raw_name)
                         if isinstance(parsed, dict):
-                            raw_name = parsed.get("ko", parsed.get("en", cid))
+                            from desktop.i18n import get_lang
+                            _lang = get_lang()
+                            raw_name = parsed.get(_lang, parsed.get("en", parsed.get("ko", cid)))
                     except Exception:
                         pass
                 local_name = raw_name if isinstance(raw_name, str) else cid
@@ -1912,26 +1914,34 @@ class ChatWindow(QWidget):
             else:
                 steps_list = [steps_raw] if steps_raw else []
 
-        # i18n content 해석 (step 구조 보존)
+        # i18n content 해석 (step 구조 보존, prompt는 i18n dict 유지)
         def _resolve(val):
-            if isinstance(val, dict):
-                return val.get("ko", val.get("en", str(val)))
+            """Display용 해석 — 현재 언어로 resolve"""
+            if isinstance(val, dict) and ("ko" in val or "en" in val):
+                from desktop.i18n import get_lang
+                lang = get_lang()
+                return val.get(lang, val.get("en", val.get("ko", str(val))))
             return str(val) if val else ""
 
         resolved_steps = []
         for step in (steps_list if isinstance(steps_list, list) else [steps_list]):
             if isinstance(step, dict):
-                content = _resolve(step.get("content", ""))
+                raw_content = step.get("content", "")
+                display_content = _resolve(raw_content)
                 stype = step.get("type", "prompt")
                 # code_name 타입 → code 타입으로 정규화 (code_name은 필드로만 사용)
                 if stype == "code_name":
                     stype = "code"
-                is_code_ref = (stype == "code" and not content.startswith("def "))
-                resolved_steps.append({
+                is_code_ref = (stype == "code" and not display_content.startswith("def "))
+                step_data = {
                     "type": stype,
-                    "content": content,
-                    "code_name": content if is_code_ref else step.get("code_name", ""),
-                })
+                    "content": display_content,
+                    "code_name": display_content if is_code_ref else step.get("code_name", ""),
+                }
+                # prompt 스텝은 i18n dict 보존 (DB 저장 시 사용)
+                if stype == "prompt" and isinstance(raw_content, dict):
+                    step_data["_i18n_content"] = raw_content
+                resolved_steps.append(step_data)
             else:
                 resolved_steps.append(_resolve(step))
 
@@ -3441,7 +3451,7 @@ class ChatWindow(QWidget):
             for j, (_, _, lbl, _, _) in enumerate(step_inputs, 1):
                 lbl.setText(f"{j}.")
 
-        def add_step_row(text="", idx=None, step_type="prompt", code_content="", code_name="", insert_at=None, step_args=None):
+        def add_step_row(text="", idx=None, step_type="prompt", code_content="", code_name="", insert_at=None, step_args=None, i18n_content=None):
             row = QHBoxLayout()
             row.setSpacing(4)
             row.setContentsMargins(0, 1, 0, 1)
@@ -3459,7 +3469,7 @@ class ChatWindow(QWidget):
             # 내용 입력 (prompt) 또는 코드 미리보기 (code)
             inp = QLineEdit()
             inp.setFixedHeight(26)
-            step_data = {"type": step_type, "code": code_content, "code_name": code_name, "args": step_args or {}}
+            step_data = {"type": step_type, "code": code_content, "code_name": code_name, "args": step_args or {}, "_i18n": i18n_content}
 
             if step_type == "code":
                 if code_name:
@@ -3734,7 +3744,7 @@ class ChatWindow(QWidget):
                     if st == "code":
                         add_step_row("", i, step_type="code", code_content=sc, code_name=cn, step_args=sa)
                     else:
-                        add_step_row(sc, i)
+                        add_step_row(sc, i, i18n_content=step_text.get("_i18n_content"))
                 else:
                     add_step_row(str(step_text), i)
         else:
@@ -3907,7 +3917,12 @@ class ChatWindow(QWidget):
                 else:
                     text = inp.text().strip()
                     if text:
-                        steps.append({"type": "prompt", "content": text})
+                        # i18n dict가 있으면 보존 (다국어 지원)
+                        i18n = data.get("_i18n")
+                        if i18n and isinstance(i18n, dict):
+                            steps.append({"type": "prompt", "content": i18n})
+                        else:
+                            steps.append({"type": "prompt", "content": text})
 
             if not steps:
                 return

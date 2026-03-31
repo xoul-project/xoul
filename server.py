@@ -335,12 +335,24 @@ def get_or_create_session(session_id: str = None) -> Session:
 
     sid = session_id or str(uuid.uuid4())
 
-    # 시스템 프롬프트 구성 (assistant_agent.py의 SYSTEM_IDENTITY + USER_INSTRUCTION_TEMPLATE 사용)
+    # ★ 새 세션 생성 시 config.json을 다시 읽어 최신 설정 반영
+    #   (서버 재시작 없이 언어 변경 등이 즉시 적용되도록)
+    # 시스템 프롬프트 구성
     from tools import TOOL_DESCRIPTIONS
     from assistant_agent import SYSTEM_IDENTITY, USER_INSTRUCTION_TEMPLATE, OPENAI_TOOLS, get_system_identity
 
+    try:
+        fresh_config = load_config()
+    except Exception:
+        fresh_config = config
+    # i18n도 최신 config으로 재초기화
+    try:
+        _init_i18n(fresh_config)
+    except Exception:
+        pass
+
     # Qwen model 감지 → Qwen3 공식 tool calling 형식 사용
-    model_name = config.get("llm", {}).get("model_name", "").lower()
+    model_name = fresh_config.get("llm", {}).get("model_name", "").lower()
     is_qwen = "qwen" in model_name
 
     if is_qwen:
@@ -371,7 +383,7 @@ def get_or_create_session(session_id: str = None) -> Session:
         )
 
     # Response language instruction based on config
-    lang = config.get("assistant", {}).get("language", "ko")
+    lang = fresh_config.get("assistant", {}).get("language", "ko")
     if lang == "en":
         response_language_instruction = "## Response Language\nAlways respond in English."
     else:
@@ -386,7 +398,7 @@ def get_or_create_session(session_id: str = None) -> Session:
         user_instruction = _system_profile + "\n\n" + user_instruction
 
     # Email not configured notice
-    if not config.get("email", {}).get("enabled", False):
+    if not fresh_config.get("email", {}).get("enabled", False):
         user_instruction += (
             "\n\n## ⚠ Email Not Configured\n"
             "Email tools (send_email, list_emails, read_email) are not configured. "
@@ -397,7 +409,7 @@ def get_or_create_session(session_id: str = None) -> Session:
     user_instruction += "\n\n" + MARKDOWN_FORMAT_GUIDE
 
     # Session 생성: system=config 기반 identity, user=전체 instruction
-    system_identity = get_system_identity(config)
+    system_identity = get_system_identity(fresh_config)
     session = Session(sid, system_identity)
     session.messages.append({"role": "system", "content": user_instruction})
     sessions[sid] = session
@@ -744,9 +756,12 @@ def _execute_tool_streaming(t_name, t_args):
                 result = _execute_tool_fn(t_name, t_args)
             except Exception as e:
                 result = f"Error: {e}"
+            # dict 결과에서 text만 추출 (screenshots는 SSE로 이미 전달)
+            if isinstance(result, dict) and "__screenshots__" in result:
+                result = result.get("text", str(result))
             output_queue.put(("__DONE__", result))
 
-        # 스크린캐스트 스레드 시작 (도구보다 먼저)
+        # SSE consumer 스레드 시작 (도구보다 먼저)
         print(f"[screencast] 🚀 starting for tool={t_name}", flush=True)
         sc_thread = threading.Thread(target=_screencast_consumer, daemon=True)
         sc_thread.start()
@@ -761,20 +776,7 @@ def _execute_tool_streaming(t_name, t_args):
                 item = output_queue.get(timeout=0.5)
                 if isinstance(item, tuple):
                     if item[0] == "__DONE__":
-                        # 도구 완료 — 프레임이 0이면 짧게 기다려서 늦게 도착하는 프레임 수집
                         tool_result = item[1]
-                        if yielded_frames == 0:
-                            print(f"[screencast] ⏳ tool done but 0 frames, waiting for late frames...", flush=True)
-                            drain_deadline = time.time() + 1.5  # 최대 1.5초 대기
-                            while time.time() < drain_deadline:
-                                try:
-                                    late_item = output_queue.get(timeout=0.3)
-                                    if isinstance(late_item, tuple) and late_item[0] == "__FRAME__":
-                                        yielded_frames += 1
-                                        yield {"type": "browser_frame", "data": late_item[1], "source": late_item[2] if len(late_item) > 2 else "ddg", "url_idx": late_item[3] if len(late_item) > 3 else 0}
-                                except queue.Empty:
-                                    if not sc_thread.is_alive():
-                                        break
                         _sc_stop.set()
                         try:
                             urllib.request.urlopen("http://127.0.0.1:9223/screencast/stop", timeout=2)
@@ -785,11 +787,11 @@ def _execute_tool_streaming(t_name, t_args):
                         break
                     elif item[0] == "__FRAME__":
                         yielded_frames += 1
-                        yield {"type": "browser_frame", "data": item[1], "source": item[2] if len(item) > 2 else "ddg", "url_idx": item[3] if len(item) > 3 else 0}
+                        yield {"type": "browser_frame", "data": item[1], "source": item[2] if len(item) > 2 else "url", "url_idx": item[3] if len(item) > 3 else 0}
             except queue.Empty:
-                if not tool_thread.is_alive():
+                if not tool_thread.is_alive() and output_queue.empty():
                     _sc_stop.set()
-                    print(f"[screencast] ⚠ tool thread died, yielded {yielded_frames} frames", flush=True)
+                    print(f"[screencast] ⚠ tool thread ended, yielded {yielded_frames} frames", flush=True)
                     yield {"type": "__done__", "result": "(completed)"}
                     break
         return
@@ -2026,7 +2028,8 @@ def _run_agent_loop(session: Session, user_message: str, output_format: str = No
 
             if "send_notification" in _executed_names and any_executed:
                 # 전송 완료 — LLM에 다시 넣으면 중복 호출 발생, 직접 종료
-                yield {"type": "final", "content": content or "✅ 메시지 전송 완료.", "tool_calls": tool_calls_log}
+                from i18n import t as _t
+                yield {"type": "final", "content": content or _t("notification.send_done"), "tool_calls": tool_calls_log}
                 return
 
             # 자체 완결형 도구: 결과가 곧 응답이므로 2차 LLM 호출 불필요 (5초 절약)

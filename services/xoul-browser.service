@@ -9,7 +9,7 @@ ExecStartPre=-/usr/bin/pkill -f chromium
 ExecStart=/usr/bin/python3 /root/xoul/browser_daemon.py
 Restart=always
 RestartSec=5
-TimeoutStopSec=5
+TimeoutStopSec=15
 KillMode=mixed
 Environment=HOME=/root
 Environment=DISPLAY=
