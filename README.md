@@ -19,6 +19,10 @@
 
 ---
 
+<p align="center">
+  <img src="res/xoul_en.gif" alt="Xoul Demo" width="600" />
+</p>
+
 ## Why Xoul
 
 | | |

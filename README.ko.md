@@ -19,6 +19,10 @@
 
 ---
 
+<p align="center">
+  <img src="res/xoul_kr.gif" alt="Xoul 데모" width="600" />
+</p>
+
 ## 왜 Xoul인가
 
 | | |
