@@ -188,5 +188,5 @@ MIT
 
 ## 링크
 
-- 🌐 [웹사이트](https://xoul.io)
+- 🌐 [웹사이트](https://www.xoulai.net)
 - 💬 [GitHub Discussions](https://github.com/xoul-project/xoul/discussions)

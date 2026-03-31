@@ -196,5 +196,5 @@ MIT
 
 ## Links
 
-- 🌐 [Website](https://xoul.io)
+- 🌐 [Website](https://www.xoulai.net)
 - 💬 [GitHub Discussions](https://github.com/xoul-project/xoul/discussions)
