@@ -386,7 +386,7 @@ if ($useCommercial) {
             google = [PSCustomObject]@{ enabled = $false }
             clients = [PSCustomObject]@{ telegram = [PSCustomObject]@{ enabled = $false; bot_token = "" } }
             search = [PSCustomObject]@{ tavily_api_key = "" }
-            web = [PSCustomObject]@{ backend_url = "http://ec2-15-165-31-212.ap-northeast-2.compute.amazonaws.com"; frontend_url = "http://ec2-15-165-31-212.ap-northeast-2.compute.amazonaws.com" }
+            web = [PSCustomObject]@{ backend_url = "https://www.xoulai.net"; frontend_url = "https://www.xoulai.net" }
         }
         Write-Host (T "setup.config_created") -ForegroundColor Gray
     }
@@ -471,7 +471,7 @@ if ($useCommercial) {
             google = [PSCustomObject]@{ enabled = $false }
             clients = [PSCustomObject]@{ telegram = [PSCustomObject]@{ enabled = $false; bot_token = "" } }
             search = [PSCustomObject]@{ tavily_api_key = "" }
-            web = [PSCustomObject]@{ backend_url = "http://ec2-15-165-31-212.ap-northeast-2.compute.amazonaws.com"; frontend_url = "http://ec2-15-165-31-212.ap-northeast-2.compute.amazonaws.com" }
+            web = [PSCustomObject]@{ backend_url = "https://www.xoulai.net"; frontend_url = "https://www.xoulai.net" }
         }
         Write-Host (T "setup.config_created") -ForegroundColor Gray
     }
@@ -652,7 +652,7 @@ if (-not $config) {
         google = [PSCustomObject]@{ enabled = $false }
         clients = [PSCustomObject]@{ telegram = [PSCustomObject]@{ enabled = $false; bot_token = "" } }
         search = [PSCustomObject]@{ tavily_api_key = "" }
-        web = [PSCustomObject]@{ backend_url = "http://ec2-15-165-31-212.ap-northeast-2.compute.amazonaws.com"; frontend_url = "http://ec2-15-165-31-212.ap-northeast-2.compute.amazonaws.com" }
+        web = [PSCustomObject]@{ backend_url = "https://www.xoulai.net"; frontend_url = "https://www.xoulai.net" }
     }
     Write-Host (T "setup.config_created") -ForegroundColor Gray
 }

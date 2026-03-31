@@ -54,6 +54,8 @@ $IncludeFiles = @(
     "slack_client.py",
     "requirements.txt",
     "README.md",
+    "README.ko.md",
+    "models.json",
 
     # i18n (다국어 지원)
     "i18n.ps1",
@@ -66,7 +68,10 @@ $IncludeFiles = @(
     "scripts\reset.ps1",
     "scripts\uninstall.ps1",
     "scripts\install.bat",
-    "scripts\import_defaults.ps1"
+    "scripts\import_defaults.ps1",
+    "scripts\auto_start.bat",
+    "scripts\preload_skills.py",
+    "scripts\vm_resize.ps1"
 )
 
 $IncludeDirs = @(
@@ -152,8 +157,8 @@ $configTemplate = @'
         "enabled": false
     },
     "web": {
-        "backend_url": "http://ec2-15-165-31-212.ap-northeast-2.compute.amazonaws.com",
-        "frontend_url": "http://ec2-15-165-31-212.ap-northeast-2.compute.amazonaws.com"
+        "backend_url": "https://www.xoulai.net",
+        "frontend_url": "https://www.xoulai.net"
     }
 }
 '@

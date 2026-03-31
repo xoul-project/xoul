@@ -62,9 +62,9 @@ The setup script installs everything automatically, but these are what it sets u
 
 ### Quick Start (Recommended)
 
-1. [Download the release file](http://ec2-15-165-31-212.ap-northeast-2.compute.amazonaws.com/xoul_dist/xoul_rel.zip)
-2. Extract the downloaded `xoul_rel.zip`
-3. Run `install.bat` inside the extracted folder
+1. Visit the [Xoul Download Page](https://www.xoulai.net/download)
+2. Download the latest release zip and (optionally) the VM image
+3. Extract the downloaded zip and run `install.bat` inside the extracted folder
 
 `install.bat` automatically handles file placement and runs the setup script.
 The interactive setup will then walk you through each step:

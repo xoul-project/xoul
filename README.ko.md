@@ -54,9 +54,9 @@
 
 ### 빠른 시작 (권장)
 
-1. [릴리즈 파일 다운로드](http://ec2-15-165-31-212.ap-northeast-2.compute.amazonaws.com/xoul_dist/xoul_rel.zip)
-2. 다운로드한 `xoul_rel.zip` 압축 해제
-3. 압축 해제된 폴더 안의 `install.bat` 실행
+1. [Xoul 다운로드 페이지](https://www.xoulai.net/download) 방문
+2. 최신 릴리즈 zip과 (선택) VM 이미지 다운로드
+3. 다운로드한 zip을 압축 해제하고 폴더 안의 `install.bat` 실행
 
 `install.bat`이 파일 배치와 설정 스크립트 실행을 자동으로 처리합니다.
 이후 대화형 설정이 모든 과정을 안내합니다.
