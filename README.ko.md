@@ -56,8 +56,7 @@
 
 1. [Xoul 다운로드 페이지](https://www.xoulai.net/download) 방문
 2. 최신 릴리즈 zip과 (선택) VM 이미지 다운로드
-3. 다운로드한 zip 압축 해제
-4. 폴더 안의 `install.bat` 실행
+3. `install.bat` 실행
 
 `install.bat`이 파일 배치와 설정 스크립트 실행을 자동으로 처리합니다.
 이후 대화형 설정이 모든 과정을 안내합니다.

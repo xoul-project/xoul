@@ -64,8 +64,7 @@ The setup script installs everything automatically, but these are what it sets u
 
 1. Visit the [Xoul Download Page](https://www.xoulai.net/download)
 2. Download the latest release zip and (optionally) the VM image
-3. Extract the downloaded zip
-4. Run `install.bat` inside the extracted folder
+3. Run `install.bat`
 
 `install.bat` automatically handles file placement and runs the setup script.
 The interactive setup will then walk you through each step:
