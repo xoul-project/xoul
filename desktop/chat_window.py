@@ -24,30 +24,11 @@ from i18n import t
 from slash_command import match_slash_command, SlashCommandPopup
 
 
-def _load_web_config():
-    """config.json에서 web URL 설정 로드"""
-    import json
-    from pathlib import Path
-    defaults = {"backend_url": "http://localhost:8080", "frontend_url": "http://localhost:8081"}
-    for cfg_path in [
-        Path(__file__).resolve().parent.parent / "config.json",
-        Path("config.json"),
-    ]:
-        if cfg_path.is_file():
-            try:
-                with open(cfg_path, "r", encoding="utf-8-sig") as f:
-                    cfg = json.load(f)
-                web = cfg.get("web", {})
-                return {
-                    "backend_url": web.get("backend_url", defaults["backend_url"]).rstrip("/"),
-                    "frontend_url": web.get("frontend_url", defaults["frontend_url"]).rstrip("/"),
-                }
-            except Exception:
-                pass
-    return defaults
+import sys as _sys, os as _os
+_sys.path.insert(0, _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), ".."))
+from env_config import get_web_config, is_dev
 
-
-WEB_CFG = _load_web_config()
+WEB_CFG = get_web_config()
 
 # ── WebEngine 캐시 비활성화 (배포 후 항상 최신 UI 로드) ──
 # ⚠ QApplication 생성 이후에만 호출 가능! ChatWindow.__init__()에서 호출됨.
@@ -452,6 +433,17 @@ class ChatWindow(QWidget):
             f"color: {C['green']}; font-size: 11px; font-family: 'Segoe UI';"
         )
         title_layout.addWidget(self._status_label)
+
+        # 🌿 DEV 환경 표시 (main이 아닌 브랜치에서만)
+        if is_dev():
+            _dev_badge = QLabel("[DEV]")
+            _dev_badge.setStyleSheet(
+                f"color: #ff8800; font-size: 10px; font-weight: bold; "
+                f"font-family: 'Segoe UI'; background: #331a00; "
+                f"border: 1px solid #ff8800; border-radius: 4px; padding: 1px 6px;"
+            )
+            _dev_badge.setToolTip(f"→ {WEB_CFG['backend_url']}")
+            title_layout.addWidget(_dev_badge)
 
         # Persona blink timer (persona now shown in status bar, not title bar)
         self._persona_blink_timer = QTimer(self)

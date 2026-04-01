@@ -320,8 +320,19 @@ def fetch_page_cdp(url: str, max_timeout: int = 12, idle_timeout: float = 2.0) -
             return None
 
         _cdp_send_recv(ws, 0, "Emulation.setDeviceMetricsOverride",
-                       {"width": 1920, "height": 1080, "deviceScaleFactor": 1, "mobile": False})
+                       {"width": 960, "height": 540, "deviceScaleFactor": 1, "mobile": False})
         _cdp_send_recv(ws, 1, "Page.enable")
+
+        # SLiRP 연결 포화 방지: JS/분석/광고 차단 (CSS/폰트는 렌더링에 필요하므로 허용)
+        # Chromium 1페이지 로드 시 JS가 60+개 외부 연결 생성 → SLiRP 슬롯 포화 → SSH 차단
+        _cdp_send_recv(ws, 2, "Network.enable")
+        _cdp_send_recv(ws, 21, "Network.setBlockedURLs", {"urls": [
+            "*.js",
+            "*google-analytics*", "*googletagmanager*", "*doubleclick*",
+            "*facebook.net*", "*facebook.com/tr*",
+            "*twitter.com/i/*", "*linkedin.com/li/*",
+            "*ads*", "*tracking*", "*beacon*", "*pixel*",
+        ]})
 
         # 이벤트 등록 완료 후 navigate
         _cdp_send_recv(ws, 3, "Page.navigate", {"url": url})
@@ -345,7 +356,7 @@ def fetch_page_cdp(url: str, max_timeout: int = 12, idle_timeout: float = 2.0) -
                 try:
                     ws.send(json.dumps({
                         "id": capture_id, "method": "Page.captureScreenshot",
-                        "params": {"format": "jpeg", "quality": 45}
+                        "params": {"format": "jpeg", "quality": 25}
                     }))
                     screenshot_sent += 1
                 except Exception as e:
@@ -422,7 +433,7 @@ def fetch_page_cdp(url: str, max_timeout: int = 12, idle_timeout: float = 2.0) -
         # ── 최종 스크린샷 (DOM 추출 후 — WebSocket 아직 살아있음) ──
         try:
             ws.sock.settimeout(5)
-            ws.send(json.dumps({"id": 999, "method": "Page.captureScreenshot", "params": {"format": "jpeg", "quality": 50}}))
+            ws.send(json.dumps({"id": 999, "method": "Page.captureScreenshot", "params": {"format": "jpeg", "quality": 25}}))
             print(f"[browser_daemon] 📤 screenshot sent id=999, waiting...", flush=True)
             found_999 = False
             for attempt in range(50):
@@ -687,7 +698,7 @@ class BrowserHandler(BaseHTTPRequestHandler):
             # 뷰포트 설정 (1920x1080)
             ws.send(json.dumps({
                 "id": 1, "method": "Emulation.setDeviceMetricsOverride",
-                "params": {"width": 1920, "height": 1080, "deviceScaleFactor": 1, "mobile": False}
+                "params": {"width": 960, "height": 540, "deviceScaleFactor": 1, "mobile": False}
             }))
             ws.recv()
 
@@ -728,7 +739,7 @@ class BrowserHandler(BaseHTTPRequestHandler):
                     try:
                         ws.send(json.dumps({
                             "id": capture_id, "method": "Page.captureScreenshot",
-                            "params": {"format": "jpeg", "quality": 55}
+                            "params": {"format": "jpeg", "quality": 25}
                         }))
                         for _ in range(5):
                             ws.sock.settimeout(0.3)

@@ -22,22 +22,11 @@ from i18n import t
 AUTH_FILE = Path(os.path.expanduser("~")) / ".xoul" / "auth.json"
 CALLBACK_PORT = 19283
 
-def _load_web_url():
-    """config.json에서 web.backend_url 로드"""
-    for cfg_path in [
-        Path(__file__).resolve().parent.parent / "config.json",
-        Path("config.json"),
-    ]:
-        if cfg_path.is_file():
-            try:
-                with open(cfg_path, "r", encoding="utf-8-sig") as f:
-                    cfg = json.load(f)
-                return cfg.get("web", {}).get("backend_url", "http://localhost:8080")
-            except Exception:
-                pass
-    return "http://localhost:8080"
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from env_config import get_web_config
 
-WEB_SERVICE_URL = _load_web_url()
+WEB_SERVICE_URL = get_web_config()["backend_url"]
 
 
 def _ensure_dir():

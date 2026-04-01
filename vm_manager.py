@@ -700,7 +700,7 @@ def start_vm(install_mode=False):
         "-m", vm_cfg["memory"],
     ] + ["-smp", str(vm_cfg["cpus"])] + [
         "-drive", f"file={_short_path(DISK_IMAGE)},format=qcow2,if=virtio",
-        "-netdev", f"user,id=net0,dns=8.8.8.8,hostfwd=tcp::{vm_cfg['ssh_port']}-:22,hostfwd=tcp::3000-:3000",
+        "-netdev", f"user,id=net0,dns=8.8.8.8,hostfwd=tcp:127.0.0.1:{vm_cfg['ssh_port']}-:22,hostfwd=tcp:127.0.0.1:3000-:3000,hostfwd=tcp:127.0.0.1:9223-:9223",
         "-device", "virtio-net-pci,netdev=net0",
         "-display", "none",
         "-serial", f"file:{_short_path(os.path.join(VM_DIR, 'serial.log'))}",

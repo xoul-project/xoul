@@ -911,22 +911,8 @@ def share_to_store(share_type: str, name: str, category: str = "Other") -> str:
 
     # 3) 웹 서버 /api/share 호출
     try:
-        # config.json에서 web backend URL 읽기
-        cfg_paths = [
-            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config.json"),
-            os.path.expanduser("~/.xoul/config.json"),
-        ]
-        backend_url = "http://localhost:8080"
-        for cfg_path in cfg_paths:
-            if os.path.isfile(cfg_path):
-                try:
-                    cfg = json.loads(open(cfg_path, encoding="utf-8-sig").read())
-                    url = cfg.get("web", {}).get("backend_url", "")
-                    if url:
-                        backend_url = url.rstrip("/")
-                        break
-                except Exception:
-                    pass
+        from env_config import get_web_config
+        backend_url = get_web_config()["backend_url"]
 
         url = f"{backend_url}/api/share"
         data = json.dumps(payload, ensure_ascii=False).encode("utf-8")

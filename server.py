@@ -697,6 +697,7 @@ def _execute_tool_streaming(t_name, t_args):
 
         output_queue = queue.Queue()
         _sc_stop = threading.Event()
+        _sc_resp = [None]  # SSE response 객체 저장 (강제 종료용)
 
         def _screencast_consumer():
             """browser_daemon의 /screencast SSE를 소비하여 프레임을 queue에 넣기"""
@@ -725,7 +726,9 @@ def _execute_tool_streaming(t_name, t_args):
                 daemon_url = f"http://127.0.0.1:9223/screencast{param}"
                 print(f"[screencast] 📹 connecting to {daemon_url[:100]}...", flush=True)
                 req = urllib.request.Request(daemon_url)
-                with urllib.request.urlopen(req, timeout=35) as resp:
+                resp = urllib.request.urlopen(req, timeout=35)
+                _sc_resp[0] = resp  # 강제 종료를 위해 저장
+                try:
                     print(f"[screencast] 📹 connected, reading frames...", flush=True)
                     frame_count = 0
                     for raw_line in resp:
@@ -748,8 +751,15 @@ def _execute_tool_streaming(t_name, t_args):
                                 break
                         except (json.JSONDecodeError, KeyError):
                             continue
+                finally:
+                    try:
+                        resp.close()
+                    except Exception:
+                        pass
+                    _sc_resp[0] = None
             except Exception as e:
-                print(f"[screencast] ❌ consumer error: {e}", flush=True)
+                if not _sc_stop.is_set():
+                    print(f"[screencast] ❌ consumer error: {e}", flush=True)
 
         def _run_tool():
             try:
@@ -778,6 +788,12 @@ def _execute_tool_streaming(t_name, t_args):
                     if item[0] == "__DONE__":
                         tool_result = item[1]
                         _sc_stop.set()
+                        # SSE response 강제 종료 (SLiRP 즉시 해제)
+                        if _sc_resp[0]:
+                            try:
+                                _sc_resp[0].close()
+                            except Exception:
+                                pass
                         try:
                             urllib.request.urlopen("http://127.0.0.1:9223/screencast/stop", timeout=2)
                         except Exception:
@@ -791,6 +807,11 @@ def _execute_tool_streaming(t_name, t_args):
             except queue.Empty:
                 if not tool_thread.is_alive() and output_queue.empty():
                     _sc_stop.set()
+                    if _sc_resp[0]:
+                        try:
+                            _sc_resp[0].close()
+                        except Exception:
+                            pass
                     print(f"[screencast] ⚠ tool thread ended, yielded {yielded_frames} frames", flush=True)
                     yield {"type": "__done__", "result": "(completed)"}
                     break
