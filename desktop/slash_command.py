@@ -123,8 +123,11 @@ class SlashCommandPopup(QListWidget):
         from PyQt6.QtWidgets import QApplication
         QApplication.instance().installEventFilter(self)
 
-    def _on_text_changed(self, text: str):
+    def _on_text_changed(self, text: str = None):
         """입력 변경 → 팝업 필터링"""
+        if text is None:
+            # QTextEdit.textChanged doesn't pass text — read from widget
+            text = self._target.toPlainText() if hasattr(self._target, 'toPlainText') else self._target.text()
         text = text.strip()
         if not text.startswith("/"):
             self.hide()

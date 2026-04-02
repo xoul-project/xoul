@@ -2,20 +2,6 @@
     "local": [
         {
             "num": "1",
-            "name": "Qwen3:4B-Q4KM",
-            "vram": 4,
-            "score": 60,
-            "speed": "Very Fast",
-            "quality": "Very Low",
-            "descKey": "model_desc_1",
-            "tag": "zendar79/qwen3:4b-q4km",
-            "temp": 0.7,
-            "topP": 0.9,
-            "ctx": 32768,
-            "maxTokens": 32768
-        },
-        {
-            "num": "2",
             "name": "Nemotron-3-Nano:4B-Q8",
             "vram": 6,
             "score": 70,
@@ -29,7 +15,7 @@
             "maxTokens": 32768
         },
         {
-            "num": "3",
+            "num": "2",
             "name": "Nemotron-3-Nano:4B-BF16",
             "vram": 8,
             "score": 75,
@@ -43,7 +29,7 @@
             "maxTokens": 32768
         },
         {
-            "num": "4",
+            "num": "3",
             "name": "Qwen3-VL-8B-Instruct",
             "vram": 12,
             "score": 80,
@@ -57,7 +43,7 @@
             "maxTokens": 32768
         },
         {
-            "num": "5",
+            "num": "4",
             "name": "GPT-oss-20B",
             "vram": 13,
             "score": 88,
@@ -71,7 +57,7 @@
             "maxTokens": 32768
         },
         {
-            "num": "6",
+            "num": "5",
             "name": "Nemotron-Cascade-2:30B",
             "vram": 20,
             "score": 95,

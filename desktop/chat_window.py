@@ -13,7 +13,7 @@ import os
 import webbrowser
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-    QLineEdit, QPushButton, QApplication, QSizeGrip,
+    QLineEdit, QTextEdit, QPushButton, QApplication, QSizeGrip,
 )
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QSettings
@@ -333,6 +333,69 @@ document.addEventListener('click', function(e) {{
 _RESIZE_MARGIN = 6
 
 
+class MultiLineInput(QTextEdit):
+    """QTextEdit 기반 멀티라인 입력 위젯.
+    - Enter → 전송 시그널 (sig_submit)
+    - Shift+Enter → 줄바꿈
+    - 자동 높이 조절 (1~5줄)
+    """
+    sig_submit = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAcceptRichText(False)
+        self.setTabChangesFocus(True)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setSizePolicy(
+            self.sizePolicy().horizontalPolicy(),
+            self.sizePolicy().verticalPolicy(),
+        )
+        # 초기 높이 (한 줄 기준, QLineEdit과 동일)
+        self._min_height = 40
+        self._max_height = 140  # ~5줄
+        self.setFixedHeight(self._min_height)
+        self.document().contentsChanged.connect(self._adjust_height)
+        # textChanged → SlashCommandPopup 호환
+        self.textChanged.connect(self._on_text_changed)
+        self._placeholder = ""
+
+    def setPlaceholderText(self, text: str):
+        self._placeholder = text
+        super().setPlaceholderText(text)
+
+    def text(self) -> str:
+        """QLineEdit 호환: 텍스트 반환"""
+        return self.toPlainText()
+
+    def setText(self, text: str):
+        """QLineEdit 호환: 텍스트 설정"""
+        self.setPlainText(text)
+
+    def clear(self):
+        super().clear()
+        self.setFixedHeight(self._min_height)
+
+    def _adjust_height(self):
+        doc_height = int(self.document().size().height()) + 12  # margin
+        new_height = max(self._min_height, min(doc_height, self._max_height))
+        self.setFixedHeight(new_height)
+
+    def _on_text_changed(self):
+        pass  # SlashCommandPopup 등 외부 연결용
+
+    def keyPressEvent(self, event):
+        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+                # Shift+Enter → 줄바꿈 삽입
+                super().keyPressEvent(event)
+            else:
+                # Enter → 전송
+                self.sig_submit.emit()
+            return
+        super().keyPressEvent(event)
+
+
 class ChatWindow(QWidget):
     """메인 채팅 창"""
 
@@ -624,18 +687,18 @@ class ChatWindow(QWidget):
         input_layout = QHBoxLayout(input_container)
         input_layout.setContentsMargins(12, 8, 12, 12)
 
-        self._chat_input = QLineEdit()
+        self._chat_input = MultiLineInput()
         self._chat_input.setPlaceholderText(t("chat.placeholder_enter"))
         self._chat_input.setFont(QFont("Segoe UI", 13))
         self._chat_input.setStyleSheet(f"""
-            QLineEdit {{
+            QTextEdit {{
                 background-color: {C['surface0']}; color: {C['text']};
                 border: 2px solid {C['surface1']}; border-radius: 12px;
                 padding: 10px 16px; font-size: 14px; font-family: 'Segoe UI';
             }}
-            QLineEdit:focus {{ border: 2px solid {C['blue']}; }}
+            QTextEdit:focus {{ border: 2px solid {C['blue']}; }}
         """)
-        self._chat_input.returnPressed.connect(self._on_submit)
+        self._chat_input.sig_submit.connect(self._on_submit)
         input_layout.addWidget(self._chat_input)
 
         # ── 슬래시 커맨드 자동완성 팝업 ──
@@ -1220,7 +1283,7 @@ class ChatWindow(QWidget):
             self.add_bot_message(t("desktop.code_stop_fail", error=str(e)))
 
     def _on_submit(self):
-        text = self._chat_input.text().strip()
+        text = self._chat_input.toPlainText().strip()
         if text:
             action = match_slash_command(text)
             if action:
