@@ -39,7 +39,7 @@ del "%TARGET%\xoul.zip" >nul 2>&1
 :: VM 이미지 복사 (있으면)
 set "VMIMAGE=%~dp0xoul.qcow2"
 if exist "%VMIMAGE%" (
-    echo   📦 VM 이미지 발견 — 복사 중... (수 분 소요)
+    echo   📦 VM 이미지 발견 — 복사 중... 수 분 소요
     if not exist "%TARGET%\vm" mkdir "%TARGET%\vm"
     copy /Y "%VMIMAGE%" "%TARGET%\vm\xoul.qcow2" >nul 2>&1
     echo   ✅ VM 이미지 복사 완료

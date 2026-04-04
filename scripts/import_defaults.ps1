@@ -22,8 +22,8 @@ $config = [System.IO.File]::ReadAllText($configPath, [System.Text.Encoding]::UTF
 $port = 3000
 $apiKey = ""
 if ($config.server) {
-    $port = $config.server.port
-    $apiKey = $config.server.api_key
+    if ($config.server.port) { $port = $config.server.port }
+    if ($config.server.api_key) { $apiKey = $config.server.api_key }
 }
 
 # 언어 결정
@@ -48,11 +48,11 @@ Write-Host ""
 $baseUrl = "http://127.0.0.1:$port"
 $headers = @{ "Authorization" = "Bearer $apiKey"; "Content-Type" = "application/json" }
 
-$maxWait = 60
+$maxWait = 30
 $waited = 0
 while ($waited -lt $maxWait) {
     try {
-        $resp = Invoke-RestMethod -Uri "$baseUrl/status" -Method Get -TimeoutSec 3 -ErrorAction Stop
+        $resp = Invoke-RestMethod -Uri "$baseUrl/docs" -Method Get -TimeoutSec 3 -ErrorAction Stop
         if ($resp) { break }
     } catch {}
     Start-Sleep -Seconds 2

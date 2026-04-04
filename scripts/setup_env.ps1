@@ -129,7 +129,8 @@ $engineType = "ollama"
 # Ollama 설치 확인 및 자동 업데이트
 $ollamaExe = Get-Command ollama -ErrorAction SilentlyContinue
 if ($ollamaExe) {
-    $currentVer = (ollama --version 2>$null) -replace "ollama version is ", ""
+    $rawVer = (ollama --version 2>$null) | Out-String
+    if ($rawVer -match '(\d+\.\d+\.\d+)') { $currentVer = $Matches[1] } else { $currentVer = "unknown" }
     Write-Host (T "setup.ollama_found" @{path=$ollamaExe.Source}) -ForegroundColor Green
     Write-Host "  Version: $currentVer" -ForegroundColor Gray
 
@@ -170,7 +171,8 @@ if ($ollamaExe) {
                     $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
                     Start-Sleep -Seconds 3
                     Get-Process -Name "Ollama*" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-                    $newVer = (ollama --version 2>$null) -replace "ollama version is ", ""
+                    $rawNewVer = (ollama --version 2>$null) | Out-String
+                    if ($rawNewVer -match '(\d+\.\d+\.\d+)') { $newVer = $Matches[1] } else { $newVer = "unknown" }
                     Write-Host "  ✅ Ollama updated: $installedVer → $newVer" -ForegroundColor Green
                 } else {
                     Write-Host "  ⏭️  Skipped update, continuing with $currentVer" -ForegroundColor Gray
@@ -1343,7 +1345,8 @@ Write-Host ""
 Write-Host (T "setup.vm_packages_title") -ForegroundColor Yellow
 
 Write-Host (T "setup.vm_checking") -ForegroundColor Gray
-& $venvPython (Join-Path $ProjectDir "vm_manager.py") start | Out-Null
+$vmScript = Join-Path $ProjectDir "vm_manager.py"
+$null = "" | & $venvPython $vmScript start 2>&1
 
 $sshKey = Join-Path $ProjectDir "vm\xoul_key"
 if (-not (Test-Path $sshKey) -and (Test-Path "C:\xoul\vm\xoul_key")) {

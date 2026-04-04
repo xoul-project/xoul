@@ -116,7 +116,17 @@ $copiedRootFiles = Get-ChildItem $TempDir -File | ForEach-Object {
     Write-Host "    ✅ $($_.Name)" -ForegroundColor DarkGray
 }
 
-# 4) share/ 빈 디렉토리 생성
+# 4) xoul-store/dist/ 디폴트 스킬 데이터 복사
+$storeDistSrc = Join-Path $ProjectRoot "xoul-store\dist"
+if (Test-Path $storeDistSrc) {
+    $storeDistDst = Join-Path $TempDir "xoul-store\dist"
+    New-Item -ItemType Directory -Path $storeDistDst -Force | Out-Null
+    Copy-Item "$storeDistSrc\*.json" $storeDistDst -Force
+    $distCount = (Get-ChildItem $storeDistDst -File).Count
+    Write-Host "    ✅ xoul-store/dist/ ($distCount개 JSON)" -ForegroundColor DarkGray
+}
+
+# 5) share/ 빈 디렉토리 생성
 New-Item -ItemType Directory -Path (Join-Path $TempDir "share") -Force | Out-Null
 Write-Host "    ✅ share/ (빈 디렉토리)" -ForegroundColor DarkGray
 
