@@ -154,6 +154,14 @@ To launch the Desktop App after setup:
 c:\xoul\desktop\xoul.bat
 ```
 
+### Quick Bar
+
+Press `Ctrl+Space` anywhere to open the **Quick Bar** — a floating input bar that lets you instantly type commands to your agent without switching windows.
+
+<p align="center">
+  <img src="res/quick.png" alt="Quick Bar" width="500" />
+</p>
+
 ## Clients
 
 | Client | Description |

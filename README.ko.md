@@ -146,6 +146,14 @@ Python 3.12로 `.venv` 생성, 모든 패키지 자동 설치.
 c:\xoul\desktop\xoul.bat
 ```
 
+### Quick Bar
+
+어디서든 `Ctrl+Space`를 누르면 **Quick Bar**가 나타나, 창 전환 없이 바로 에이전트에게 명령을 입력할 수 있습니다.
+
+<p align="center">
+  <img src="res/quick.png" alt="Quick Bar" width="500" />
+</p>
+
 ## 클라이언트
 
 | 클라이언트 | 설명 |
