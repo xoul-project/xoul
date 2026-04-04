@@ -52,6 +52,7 @@ $IncludeFiles = @(
     "telegram_client.py",
     "discord_client.py",
     "slack_client.py",
+    "env_config.py",
     "requirements.txt",
     "README.md",
     "README.ko.md",
