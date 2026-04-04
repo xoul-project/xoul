@@ -162,6 +162,14 @@ Press `Ctrl+Space` anywhere to open the **Quick Bar** — a floating input bar t
   <img src="res/quick.png" alt="Quick Bar" width="500" />
 </p>
 
+### Use Example — Quick Bar + Application Launch
+
+Use the Quick Bar to search and open a website directly in Chrome — no window switching needed.
+
+<p align="center">
+  <img src="res/app_lauch.gif" alt="Quick Bar + Application Launch" width="600" />
+</p>
+
 ## Clients
 
 | Client | Description |

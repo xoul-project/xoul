@@ -154,6 +154,14 @@ c:\xoul\desktop\xoul.bat
   <img src="res/quick.png" alt="Quick Bar" width="500" />
 </p>
 
+### 사용 예시 — Quick Bar + Application Launch
+
+Quick Bar를 활용하여 검색 후 바로 Chrome으로 웹사이트를 여는 모습입니다 — 창 전환 없이 한 번에 처리됩니다.
+
+<p align="center">
+  <img src="res/app_lauch.gif" alt="Quick Bar + Application Launch" width="600" />
+</p>
+
 ## 클라이언트
 
 | 클라이언트 | 설명 |
