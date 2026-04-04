@@ -142,8 +142,8 @@ class App:
 
         self.chat_window.start_thinking()
 
-        from host_tools import get_installed_app_names
-        host_ctx = {"installed_apps": get_installed_app_names()}
+        from host_tools import get_installed_app_names, get_uri_schemes_summary
+        host_ctx = {"installed_apps": get_installed_app_names(), "uri_schemes_summary": get_uri_schemes_summary()}
         worker = self.api.send_message(
             i18n.t("main.auto_greeting"),
             host_context=host_ctx,
@@ -174,8 +174,8 @@ class App:
         self.input_bar.set_waiting(True)
 
         # API 워커 시작
-        from host_tools import get_installed_app_names
-        host_ctx = {"installed_apps": get_installed_app_names()}
+        from host_tools import get_installed_app_names, get_uri_schemes_summary
+        host_ctx = {"installed_apps": get_installed_app_names(), "uri_schemes_summary": get_uri_schemes_summary()}
         worker = self.api.send_message(text, host_context=host_ctx)
         worker.sig_thinking.connect(self._on_thinking)
         worker.sig_tool_start.connect(self._on_tool_start)

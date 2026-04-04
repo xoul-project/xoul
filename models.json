@@ -16,6 +16,20 @@
         },
         {
             "num": "2",
+            "name": "Gemma4:E2B",
+            "vram": 8,
+            "score": 72,
+            "speed": "Fast",
+            "quality": "Mid",
+            "descKey": "model_desc_gemma4_e2b",
+            "tag": "gemma4:e2b",
+            "temp": 1.0,
+            "topP": 0.95,
+            "ctx": 131072,
+            "maxTokens": 32768
+        },
+        {
+            "num": "3",
             "name": "Nemotron-3-Nano:4B-BF16",
             "vram": 8,
             "score": 75,
@@ -29,7 +43,21 @@
             "maxTokens": 32768
         },
         {
-            "num": "3",
+            "num": "4",
+            "name": "Gemma4:E4B",
+            "vram": 10,
+            "score": 78,
+            "speed": "Fast",
+            "quality": "Mid",
+            "descKey": "model_desc_gemma4_e4b",
+            "tag": "gemma4:e4b",
+            "temp": 1.0,
+            "topP": 0.95,
+            "ctx": 131072,
+            "maxTokens": 32768
+        },
+        {
+            "num": "5",
             "name": "Qwen3-VL-8B-Instruct",
             "vram": 12,
             "score": 80,
@@ -43,7 +71,7 @@
             "maxTokens": 32768
         },
         {
-            "num": "4",
+            "num": "6",
             "name": "GPT-oss-20B",
             "vram": 13,
             "score": 88,
@@ -57,7 +85,35 @@
             "maxTokens": 32768
         },
         {
-            "num": "5",
+            "num": "7",
+            "name": "Gemma4:26B",
+            "vram": 18,
+            "score": 90,
+            "speed": "Mid",
+            "quality": "Good",
+            "descKey": "model_desc_gemma4_26b",
+            "tag": "gemma4:26b",
+            "temp": 1.0,
+            "topP": 0.95,
+            "ctx": 262144,
+            "maxTokens": 32768
+        },
+        {
+            "num": "8",
+            "name": "Gemma4:31B",
+            "vram": 20,
+            "score": 92,
+            "speed": "Mid",
+            "quality": "Nice",
+            "descKey": "model_desc_gemma4_31b",
+            "tag": "gemma4:31b",
+            "temp": 1.0,
+            "topP": 0.95,
+            "ctx": 262144,
+            "maxTokens": 32768
+        },
+        {
+            "num": "9",
             "name": "Nemotron-Cascade-2:30B",
             "vram": 20,
             "score": 95,

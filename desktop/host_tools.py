@@ -49,6 +49,190 @@ def get_installed_app_names() -> list:
 
 
 # ─────────────────────────────────────────────
+# URI 스킴 스캔 및 카테고리별 요약 (레지스트리 HKCR)
+# ─────────────────────────────────────────────
+_URI_SUMMARY: str = ""
+
+# 카테고리 매핑 — scheme 이름(소문자) prefix → 카테고리
+_SCHEME_CATEGORIES = {
+    # Gaming
+    "steam": "Gaming", "steamvr": "Gaming", "steamlink": "Gaming",
+    "steamtours": "Gaming", "battlenet": "Gaming", "blizzard": "Gaming",
+    "heroes": "Gaming", "starcraft": "Gaming", "origin": "Gaming",
+    "origin2": "Gaming", "ealink": "Gaming", "link2ea": "Gaming",
+    "eaconnect": "Gaming", "iracing": "Gaming", "citadel": "Gaming",
+    "hlvr": "Gaming", "oculus": "Gaming", "vrmonitor": "Gaming",
+    # Chat & Communication
+    "discord": "Chat", "kakaotalk": "Chat", "kakaoopen": "Chat",
+    "msteams": "Chat", "ms-teams": "Chat", "mailto": "Chat",
+    "callto": "Chat", "tel": "Chat", "sip": "Chat", "sms": "Chat",
+    # Office
+    "ms-word": "Office", "ms-excel": "Office", "ms-powerpoint": "Office",
+    "ms-publisher": "Office", "ms-access": "Office", "onenote": "Office",
+    "ms-outlook": "Office", "outlookmail": "Office", "outlookcal": "Office",
+    "outlook.url": "Office", "webcal": "Office", "feed": "Office",
+    # System & Settings
+    "ms-settings": "Settings", "ms-availablenetworks": "Settings",
+    "calculator": "Settings", "ms-calculator": "Settings",
+    "ms-paint": "Settings", "ms-clock": "Settings",
+    "ms-screenclip": "Settings", "ms-screensketch": "Settings",
+    "ms-notepad": "Settings", "ms-photos": "Settings",
+    "ms-copilot": "Settings", "ms-gamebar": "Settings",
+    "ms-windows-store": "Settings", "windowsdefender": "Settings",
+    # Dev Tools
+    "cursor": "Dev", "unityhub": "Dev", "com.unity3d": "Dev",
+    "lmstudio": "Dev", "ollama": "Dev", "vsweb": "Dev",
+    # Media
+    "audacity": "Media", "capcut": "Media", "acrobat": "Media",
+    "launchreader": "Media", "gomcmd": "Media", "avis": "Media",
+    "magnet": "Media", "bittorrent": "Media",
+    # Network & VPN
+    "nordvpn": "VPN", "nvidiaapp": "Other",
+    # Browser
+    "http": "Browser", "https": "Browser", "google-chrome": "Browser",
+    "microsoft-edge": "Browser",
+}
+
+# 무시할 시스템/내부용 prefix
+_SKIP_PREFIXES = (
+    "ms-xbl-", "ms-cxh", "ms-oobe", "ms-retaildemo", "ms-device-",
+    "ms-wpc", "ms-wpdrmv", "ms-wxh", "ms-xbet", "ms-woah",
+    "ms-lwh", "ms-ipmessaging", "ms-holographic", "ms-eyecontrol",
+    "ms-edu-", "ms-fulltrust", "ms-rdx-", "ms-apprep", "ms-aad-",
+    "ms-appinstaller", "ms-inputapp", "ms-shellhost", "ms-snaplaunch",
+    "ms-stt", "ms-taskswitcher", "ms-virtualtouchpad", "ms-voip",
+    "ms-walk-", "ms-wcrv", "ms-widgetboard", "ms-widgets",
+    "ms-startfeeds", "ms-sticker", "ms-newsandinterests",
+    "ms-msime", "ms-meetnow", "ms-launchremote", "ms-insights",
+    "ms-contact", "ms-crossdevice", "ms-discoverwidget",
+    "ms-officecmd", "ms-officeapp", "ms-office-storage",
+    "ms-office-ai", "ms-get", "ms-gaming", "ms-gamebarservices",
+    "ms-print-", "ms-personacard", "ms-phone", "ms-playto",
+    "ms-powerautomate", "ms-quick-assist", "ms-media-player",
+    "ms-search", "ms-windows-search", "ms-windows-store-deskext",
+    "ms-windows-store2", "ms-windowsbackup", "ms-unistore",
+    "ms-mmsys", "ms-msdt", "ms-controlcenter",
+    "xbox-", "xbls", "msxbox", "msgame", "msnews", "msnnews",
+    "msnweather", "mswindows", "msonedrivesyncserviceclient",
+    "msteamscanary", "msul",
+    "explorer.", "ie.", "iehistory", "ierss",
+    "res", "mk", "read", "file", "ftp",
+    "jnlp", "ldap", "rlogin", "telnet", "tn3270",
+    "tbauth", "windows.tbauth", "pw.oauth2",
+    "wp-autoplay", "wpa", "wtsapp", "wsl-settings",
+    "action-", "armodelviewing", "asusac",
+    "adobe.genuine", "som", "dzreportx", "anysignforpc",
+    "wizvera", "receiver", "microsoft.windows.camera",
+    "microsoft.windows.photos", "com.adobe", "com.clipchamp",
+    "com.microsoft.3d", "gaming-tcui", "gamingservicesui",
+    "git-client", "grvopen", "odopen", "insiderhub",
+    "feedback-hub", "windows-feedback", "lpa", "mapi",
+    "search-ms", "search", "skype", "vsls", "vstfs",
+    "web+msteams", "wifi", "bingmaps", "bingnews", "bingweather",
+    "im", "sips", "onenote-cmd", "microsoft.workfolders",
+    "ms-olk-", "outlookaccounts", "edimakor",
+    "wmp11", "mms", "dlna", "ms-clipchamp",
+    "antigravity", "discord-1034",
+    "microsoftmusic", "microsoftvideo", "microsoftsolitaire",
+    "blizzard.uri",  # battlenet:// 으로 충분
+    "acrobat20", "acrobat2",  # acrobat:// 으로 충분
+    "onenotedesktop", "onenote.url", "oneindex",  # onenote:// 으로 충분
+    "outlook.url",  # mailto:// 으로 충분
+    "stssync", "feeds",
+    "ms-settings-",  # ms-settings:// 으로 충분 (서브 스킴은 LLM이 알고 있음)
+    "ms-penworkspace", "ms-people", "ms-actioncenter",
+    "ms-default-location", "ms-devhome", "ms-drive-to",
+    "ms-clicktodo", "ms-to-do",
+    "ms-copilot", "ms-cortana",
+    "vsweb+",  # vsweb:// 계열 중복
+    "nordvpn.notification",  # nordvpn:// 으로 충분
+    "gogms", "gomlogo", "jamak",  # gomcmd:// 으로 충분
+)
+
+
+def scan_uri_schemes() -> list:
+    """Windows 레지스트리에서 등록된 URI 스킴 목록을 스캔"""
+    try:
+        import winreg
+    except ImportError:
+        return []
+
+    results = []
+    try:
+        root = winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, '')
+        i = 0
+        while True:
+            try:
+                subkey_name = winreg.EnumKey(root, i)
+                i += 1
+                try:
+                    sk = winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, subkey_name)
+                    try:
+                        winreg.QueryValueEx(sk, 'URL Protocol')
+                    except FileNotFoundError:
+                        sk.Close()
+                        continue
+                    results.append(subkey_name)
+                    sk.Close()
+                except Exception:
+                    pass
+            except OSError:
+                break
+        root.Close()
+    except Exception:
+        pass
+    return results
+
+
+def get_uri_schemes_summary() -> str:
+    """카테고리별로 그룹핑된 URI 스킴 요약 문자열 반환 (LLM 프롬프트용, ~200 토큰)"""
+    global _URI_SUMMARY
+    if _URI_SUMMARY:
+        return _URI_SUMMARY
+
+    schemes = scan_uri_schemes()
+    if not schemes:
+        return ""
+
+    # 카테고리별 분류
+    categorized = {}
+    for scheme in schemes:
+        lower = scheme.lower()
+
+        # 무시 대상 확인
+        if any(lower.startswith(skip.lower()) for skip in _SKIP_PREFIXES):
+            continue
+
+        # 카테고리 매핑
+        cat = None
+        for prefix, category in _SCHEME_CATEGORIES.items():
+            if lower.startswith(prefix.lower()):
+                cat = category
+                break
+
+        if cat and cat != "Browser":  # http/https는 이미 당연하므로 제외
+            if cat not in categorized:
+                categorized[cat] = []
+            display = f"{scheme}://"
+            if display not in categorized[cat]:
+                categorized[cat].append(display)
+
+    if not categorized:
+        return ""
+
+    # 카테고리 순서 고정
+    order = ["Gaming", "Chat", "Office", "Settings", "Dev", "Media", "VPN", "Other"]
+    lines = []
+    for cat in order:
+        items = categorized.get(cat, [])
+        if items:
+            lines.append(f"{cat}: {', '.join(items)}")
+
+    _URI_SUMMARY = "\n".join(lines)
+    return _URI_SUMMARY
+
+
+# ─────────────────────────────────────────────
 # 보안: 허용 경로
 # ─────────────────────────────────────────────
 ALLOWED_SEARCH_DIRS = [
@@ -321,7 +505,7 @@ def host_run_command(command: str) -> str:
 
 # Tier 1: 자동 실행
 TIER1_TOOLS = {
-    "host_open_url": lambda args: host_open_url(args.get("url", "")),
+    "host_open_url": lambda args: host_open_url(args.get("url", args.get("command", args.get("link", "")))),
     "host_find_file": lambda args: host_find_file(
         args.get("query", ""), args.get("directory", "")
     ),
