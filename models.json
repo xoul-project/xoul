@@ -3,7 +3,7 @@
         {
             "num": "1",
             "name": "Nemotron-3-Nano:4B-Q8",
-            "vram": 6,
+            "vram": 7,
             "score": 70,
             "speed": "Fast",
             "quality": "Low",
@@ -17,7 +17,7 @@
         {
             "num": "2",
             "name": "Nemotron-3-Nano:4B-BF16",
-            "vram": 8,
+            "vram": 10,
             "score": 75,
             "speed": "Fast",
             "quality": "Mid",
@@ -31,7 +31,7 @@
         {
             "num": "3",
             "name": "Qwen3-VL-8B-Instruct",
-            "vram": 12,
+            "vram": 14,
             "score": 80,
             "speed": "Fast",
             "quality": "Mid",
@@ -45,7 +45,7 @@
         {
             "num": "4",
             "name": "GPT-oss-20B",
-            "vram": 13,
+            "vram": 16,
             "score": 88,
             "speed": "Fast",
             "quality": "Good",
@@ -59,7 +59,7 @@
         {
             "num": "5",
             "name": "Nemotron-Cascade-2:30B",
-            "vram": 20,
+            "vram": 24,
             "score": 95,
             "speed": "Little Slow",
             "quality": "Nice",

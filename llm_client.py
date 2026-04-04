@@ -107,9 +107,10 @@ class LLMClient:
                 payload["max_tokens"] = 4096
             else:
                 payload["max_completion_tokens"] = 4096
-        # Nanbeige model 호환성 처리
+        # 모델별 호환성 처리
         model_lower = (self.model_name or "").lower()
         is_nanbeige = "nanbeige" in model_lower
+        is_gemma = "gemma" in model_lower
 
         # Thinking 모델(Modelfile에 think=true 내장)이 tool call 시
         # reasoning만 하고 content/tool_calls를 비우는 문제 방지
@@ -120,8 +121,10 @@ class LLMClient:
         if is_nanbeige and payload.get("max_tokens", 0) > 32768:
             payload["max_tokens"] = 32768
 
-        # Nanbeige model은 Ollama native tool calling과 호환되지 않음
-        if tools and not is_nanbeige:
+        # Nanbeige, Gemma: Ollama native tool calling과 호환되지 않음
+        # Gemma4는 func{key:<|"|>val<|"|>} 형태 malformed 출력 → 프롬프트 기반으로 전환
+        _skip_native_tools = is_nanbeige or is_gemma
+        if tools and not _skip_native_tools:
             payload["tools"] = tools
             payload["tool_choice"] = "auto"
         try:

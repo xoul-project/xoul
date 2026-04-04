@@ -353,10 +353,16 @@ def get_or_create_session(session_id: str = None) -> Session:
 
     # Qwen model 감지 → Qwen3 공식 tool calling 형식 사용
     model_name = fresh_config.get("llm", {}).get("model_name", "").lower()
+    if not model_name:
+        model_name = fresh_config.get("llm", {}).get("ollama_model", "").lower()
     is_qwen = "qwen" in model_name
+    is_gemma = "gemma" in model_name
+    is_nanbeige = "nanbeige" in model_name
+    # native tool calling 미지원 모델: 프롬프트에 도구 목록 직접 삽입 필요
+    _needs_prompt_tools = is_qwen or is_gemma or is_nanbeige
 
-    if is_qwen:
-        # Qwen3 공식 chat template 형식: <tools> 블록 + <tool_call> 지시
+    if _needs_prompt_tools:
+        # 도구 목록을 프롬프트에 직접 삽입 (native tool calling 미지원 모델)
         import json
         tools_json_list = []
         for t in OPENAI_TOOLS:

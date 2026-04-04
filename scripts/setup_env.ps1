@@ -146,10 +146,10 @@ if ($ollamaExe) {
             Remove-Job $job -Force
             $installedVer = ""
             $availableVer = ""
-            if ($listOutput -match "Ollama\.Ollama\s+.*?(\d+\.\d+\.\d+)\s+(\d+\.\d+\.\d+)") {
+            if ($listOutput -match "Ollama\.Ollama\s+(\d+[\d.]+\d)\s+(\d+[\d.]+\d)\s+winget") {
                 $installedVer = $Matches[1]
                 $availableVer = $Matches[2]
-            } elseif ($listOutput -match "Ollama\.Ollama\s+.*?(\d+\.\d+\.\d+)") {
+            } elseif ($listOutput -match "Ollama\.Ollama\s+(\d+[\d.]+\d)\s+winget") {
                 $installedVer = $Matches[1]
             }
 
@@ -213,11 +213,11 @@ if ($currentMaxModels -ne "3") {
     $env:OLLAMA_MAX_LOADED_MODELS = "3"
 }
 $currentNumParallel = [System.Environment]::GetEnvironmentVariable("OLLAMA_NUM_PARALLEL", "User")
-if ($currentNumParallel -ne "4") {
-    [System.Environment]::SetEnvironmentVariable("OLLAMA_NUM_PARALLEL", "4", "User")
-    $env:OLLAMA_NUM_PARALLEL = "4"
+if ($currentNumParallel -ne "1") {
+    [System.Environment]::SetEnvironmentVariable("OLLAMA_NUM_PARALLEL", "1", "User")
+    $env:OLLAMA_NUM_PARALLEL = "1"
 }
-Write-Host "  ✅ OLLAMA_MAX_LOADED_MODELS=3, OLLAMA_NUM_PARALLEL=4 set" -ForegroundColor Green
+Write-Host "  ✅ OLLAMA_MAX_LOADED_MODELS=3, OLLAMA_NUM_PARALLEL=1 set" -ForegroundColor Green
 
 # 임베딩 모델 자동 설치 (시맨틱 메모리/유사도 검색용 - BGE-M3)
 Write-Host (T "setup.embed_installing") -ForegroundColor Yellow

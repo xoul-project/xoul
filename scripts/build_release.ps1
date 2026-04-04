@@ -8,6 +8,7 @@
 #>
 
 $ErrorActionPreference = "Stop"
+Add-Type -Assembly System.IO.Compression.FileSystem
 
 # ─── 설정 ───
 $ProjectRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
@@ -38,81 +39,84 @@ if (Test-Path $TempDir) { Remove-Item $TempDir -Recurse -Force }
 if (Test-Path $OutPath) { Remove-Item $OutPath -Force }
 New-Item -ItemType Directory -Path $TempDir -Force | Out-Null
 
-# ─── 포함할 파일 목록 ───
-$IncludeFiles = @(
-    # 핵심 코드
-    "server.py",
-    "assistant_agent.py",
-    "llm_client.py",
-    "vm_manager.py",
-    "terminal_client.py",
-    "tool_call_parser.py",
-    "browser_daemon.py",
-    "google_auth.py",
-    "telegram_client.py",
-    "discord_client.py",
-    "slack_client.py",
-    "env_config.py",
-    "requirements.txt",
-    "README.md",
-    "README.ko.md",
-    "models.json",
-
-    # i18n (다국어 지원)
-    "i18n.ps1",
-    "i18n.py",
-
-    # 스크립트
-    "scripts\setup_env.ps1",
-    "scripts\deploy.ps1",
-    "scripts\launcher.ps1",
-    "scripts\reset.ps1",
-    "scripts\uninstall.ps1",
-    "scripts\install.bat",
-    "scripts\import_defaults.ps1",
-    "scripts\auto_start.bat",
-    "scripts\preload_skills.py",
-    "scripts\vm_resize.ps1"
+# ─── 제외 목록 (Blacklist) ───
+# 여기에 없는 파일/디렉토리는 모두 배포에 포함됩니다.
+# 새 파일 추가 시 자동으로 빌드에 포함!
+$ExcludeDirs = @(
+    ".git"
+    ".gitignore"
+    ".vscode"
+    ".idea"
+    ".gemini"
+    ".agents"
+    "__pycache__"
+    ".venv"
+    "venv"
+    "vm"
+    "dist"
+    "logs"
+    "share"
+    "workspace"
+    "tests"
+    "res"
+    "llm"
+    # 별도 레포
+    "arena_server"
+    "web_service"
+    "xoul-store"
 )
 
-$IncludeDirs = @(
-    "tools"
-    "desktop"
-    "services"
-    "locales"
+$ExcludeFiles = @(
+    # 비밀/사용자 설정
+    "config.json"
+    "credentials.json"
+    "token.json"
+    ".env"
+    ".defaults_imported"
+    "server_checkpoint.txt"
+    # 임시/로그
+    "gitlog.txt"
+    "korean_strings.csv"
+    # 빌드 스크립트 자체
+    "scripts\build_release.ps1"
+    "scripts\build_image.ps1"
 )
 
-# ─── 파일 복사 ───
+$ExcludePatterns = @(
+    "*.pyc"
+    "*.pyo"
+    "*.zip"
+    "*.log"
+    "*.bak"
+    "*.db"
+    "tmp_*.*"
+    "temp_*.*"
+)
+
+# ─── 프로젝트 전체 복사 후 제외 항목 삭제 ───
 Write-Host "  🔧 파일 복사 중..." -ForegroundColor Yellow
 
-# 개별 파일 복사
-foreach ($f in $IncludeFiles) {
-    $src = Join-Path $ProjectRoot $f
-    if (Test-Path $src) {
-        $dest = Join-Path $TempDir $f
-        $destDir = Split-Path -Parent $dest
-        if (-not (Test-Path $destDir)) { New-Item -ItemType Directory -Path $destDir -Force | Out-Null }
-        Copy-Item $src $dest -Force
-        Write-Host "    ✅ $f" -ForegroundColor DarkGray
-    } else {
-        Write-Host "    ⚠ $f (없음, 건너뜀)" -ForegroundColor DarkYellow
-    }
+# 1) 전체 복사 (robocopy: 빠르고 안정적)
+$robocopyExclDirs = $ExcludeDirs
+$robocopyExclFiles = $ExcludePatterns + $ExcludeFiles
+& robocopy $ProjectRoot $TempDir /E /NFL /NDL /NJH /NJS /NC /NS /NP `
+    /XD $robocopyExclDirs `
+    /XF $robocopyExclFiles | Out-Null
+
+# 2) 남아 있을 수 있는 __pycache__ 정리
+Get-ChildItem $TempDir -Directory -Filter "__pycache__" -Recurse -ErrorAction SilentlyContinue |
+    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+
+# 3) 복사된 파일 목록 출력
+$copiedDirs = Get-ChildItem $TempDir -Directory | ForEach-Object {
+    $count = (Get-ChildItem $_.FullName -File -Recurse -ErrorAction SilentlyContinue).Count
+    Write-Host "    ✅ $($_.Name)/ ($count개 파일)" -ForegroundColor DarkGray
+}
+$copiedRootFiles = Get-ChildItem $TempDir -File | ForEach-Object {
+    Write-Host "    ✅ $($_.Name)" -ForegroundColor DarkGray
 }
 
-# 디렉토리 복사 (__pycache__ 제외)
-foreach ($d in $IncludeDirs) {
-    $src = Join-Path $ProjectRoot $d
-    if (Test-Path $src) {
-        $dest = Join-Path $TempDir $d
-        Copy-Item $src $dest -Recurse -Force
-        # __pycache__ 제거
-        Get-ChildItem $dest -Directory -Filter "__pycache__" -Recurse | Remove-Item -Recurse -Force
-        $count = (Get-ChildItem $dest -File -Recurse).Count
-        Write-Host "    ✅ $d/ ($count개 파일)" -ForegroundColor DarkGray
-    }
-}
-
-# share/ 빈 디렉토리 생성
+# 4) share/ 빈 디렉토리 생성
 New-Item -ItemType Directory -Path (Join-Path $TempDir "share") -Force | Out-Null
 Write-Host "    ✅ share/ (빈 디렉토리)" -ForegroundColor DarkGray
 
@@ -192,9 +196,9 @@ Remove-Item $TempDir -Recurse -Force
 
 # ─── 결과 ───
 $size = [math]::Round((Get-Item $OutPath).Length / 1KB, 1)
-$fileCount = $IncludeFiles.Count + ($IncludeDirs | ForEach-Object {
-    (Get-ChildItem (Join-Path $ProjectRoot $_) -File -Recurse -Exclude "__pycache__").Count
-} | Measure-Object -Sum).Sum + 2  # +2 for config.json template + share/
+$zip = [IO.Compression.ZipFile]::OpenRead($OutPath)
+$fileCount = ($zip.Entries | Where-Object { $_.Name -ne "" }).Count
+$zip.Dispose()
 
 Write-Host ""
 Write-Host "  ═══════════════════════════════" -ForegroundColor Green
@@ -202,6 +206,7 @@ Write-Host "  ✅ 배포 패키지 생성 완료!" -ForegroundColor Green
 Write-Host "  ─────────────────────────────"
 Write-Host "  폴더: dist/" -ForegroundColor White
 Write-Host "  파일: $OutName + install.bat" -ForegroundColor White
+Write-Host "  파일 수: $fileCount" -ForegroundColor White
 Write-Host "  크기: ${size}KB" -ForegroundColor White
 Write-Host "  ═══════════════════════════════" -ForegroundColor Green
 Write-Host ""

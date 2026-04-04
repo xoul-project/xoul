@@ -59,11 +59,21 @@ if ($ollamaProc) {
     Start-Sleep -Seconds 2
 }
 
-# Ollama 시작 (병렬 처리 + 멀티 모델 설정)
-$env:OLLAMA_NUM_PARALLEL = "4"
+# Ollama 시작 (멀티 모델 설정)
+$env:OLLAMA_NUM_PARALLEL = "1"
 $env:OLLAMA_MAX_LOADED_MODELS = "3"
 $env:OLLAMA_KEEP_ALIVE = "-1"
-$env:OLLAMA_FLASH_ATTENTION = "1"
+
+# Gemma 모델은 flash attention이 KV cache를 CPU로 내려 성능 저하 유발
+# Gemma일 때만 끄고, 나머지는 Ollama 기본값(자동 감지)에 맡김
+$cfgModel = if ($config.llm.ollama_model) { $config.llm.ollama_model } elseif ($config.llm.providers.local.model_name) { $config.llm.providers.local.model_name } else { "" }
+if ($cfgModel -match "gemma") {
+    $env:OLLAMA_FLASH_ATTENTION = "0"
+    Write-Host "  ⚙ Flash attention disabled (gemma model detected)" -ForegroundColor Yellow
+} else {
+    Remove-Item Env:\OLLAMA_FLASH_ATTENTION -ErrorAction SilentlyContinue
+}
+
 $ollamaRunning = $false
 $ollamaExe = Get-Command ollama -ErrorAction SilentlyContinue
 if ($ollamaExe) {
@@ -89,29 +99,35 @@ if (-not $ollamaRunning) {
     Write-Host ""
     Write-Host (T "launcher.ollama_fail") -ForegroundColor Red
 } else {
-    # Ollama 모델 num_ctx 설정
-    $ollamaModel = if ($config.llm -and $config.llm.ollama_model) { $config.llm.ollama_model } else { "qwen3:8b" }
-    Write-Host (T "launcher.model_ctx_check" @{model=$ollamaModel}) -ForegroundColor Yellow
-    try {
-        $tempModelfile = Join-Path $env:TEMP "xoul_modelfile"
-        "FROM $ollamaModel`nPARAMETER num_ctx 32768" | Set-Content -Path $tempModelfile -Encoding UTF8
-        $createResult = & ollama create $ollamaModel -f $tempModelfile 2>&1
-        Remove-Item $tempModelfile -ErrorAction SilentlyContinue
-        Write-Host (T "launcher.model_ctx_set") -ForegroundColor Green
-    } catch {
-        Write-Host (T "launcher.model_ctx_fail") -ForegroundColor Yellow
-    }
 
     # GPU 예열 — 모델을 VRAM에 미리 로드
     $isLocal = ($config.llm.engine -eq "ollama")
     if ($isLocal) {
-        Write-Host "  🔥 Warming up GPU ($ollamaModel)..." -NoNewline -ForegroundColor Yellow
-        try {
-            $body = @{ model = $ollamaModel; prompt = "hi"; stream = $false; options = @{ num_predict = 1 } } | ConvertTo-Json
-            $warmup = Invoke-RestMethod -Uri "http://127.0.0.1:11434/api/generate" -Method Post -Body $body -ContentType "application/json" -TimeoutSec 120
-            Write-Host " ✅ Model loaded in VRAM" -ForegroundColor Green
-        } catch {
-            Write-Host " ⚠ warmup skipped" -ForegroundColor Yellow
+        $ollamaModel = $config.llm.ollama_model
+        if (-not $ollamaModel) {
+            $ollamaModel = $config.llm.providers.local.model_name
+        }
+        if ($ollamaModel) {
+            # models.json에서 해당 모델의 ctx 값 읽기
+            $modelsJsonPath = Join-Path $ProjectDir "models.json"
+            $ctxSize = 32768  # 기본값
+            if (Test-Path $modelsJsonPath) {
+                $modelsData = Get-Content -Path $modelsJsonPath -Raw -Encoding UTF8 | ConvertFrom-Json
+                $matchedModel = $modelsData.local | Where-Object { $_.tag -eq $ollamaModel } | Select-Object -First 1
+                if ($matchedModel -and $matchedModel.ctx) {
+                    $ctxSize = $matchedModel.ctx
+                }
+            }
+            Write-Host "  🔥 Warming up GPU ($ollamaModel, ctx=$ctxSize)..." -NoNewline -ForegroundColor Yellow
+            try {
+                $body = @{ model = $ollamaModel; prompt = "hi"; stream = $false; options = @{ num_predict = 1; num_ctx = $ctxSize } } | ConvertTo-Json
+                $warmup = Invoke-RestMethod -Uri "http://127.0.0.1:11434/api/generate" -Method Post -Body $body -ContentType "application/json" -TimeoutSec 120
+                Write-Host " ✅ Model loaded in VRAM" -ForegroundColor Green
+            } catch {
+                Write-Host " ⚠ warmup skipped" -ForegroundColor Yellow
+            }
+        } else {
+            Write-Host "  ⚠ No ollama_model configured, skipping GPU warmup" -ForegroundColor Yellow
         }
     }
 }

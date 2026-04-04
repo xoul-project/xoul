@@ -19,6 +19,8 @@ def detect_model_type(model_name: str) -> str:
     name = (model_name or "").lower()
     if "qwen" in name:
         return "qwen"
+    if "gemma" in name:
+        return "gemma"
     if "nemotron" in name:
         return "nemotron"
     if "glm" in name:
@@ -97,6 +99,216 @@ def _extract_qwen(text: str) -> List[Dict]:
             td = _parse_json_tool(raw)
             if td:
                 results.append(td)
+
+    return results
+
+
+# ───────────────────────────────────────────
+# Gemma4 Tool Call Parser
+# 공식 포맷: <|tool_call>call:func_name{key:<|"|>value<|"|>}<tool_call|>
+# Ollama 경유 시: call:func_name{key:<|"|>value<|"|>} 또는 func_name{key:<|"|>value<|"|>}
+# ───────────────────────────────────────────
+
+_GEMMA_STRING_DELIM = '<|"|>'
+
+def _parse_gemma4_value(value_str: str):
+    """Gemma4 단일 값 파싱 (key: 이후)"""
+    value_str = value_str.strip()
+    if not value_str:
+        return value_str
+    if value_str == "true":
+        return True
+    if value_str == "false":
+        return False
+    try:
+        if "." in value_str:
+            return float(value_str)
+        return int(value_str)
+    except ValueError:
+        pass
+    return value_str
+
+
+def _parse_gemma4_array(arr_str: str) -> list:
+    """Gemma4 배열 파싱"""
+    items = []
+    i = 0
+    n = len(arr_str)
+    while i < n:
+        while i < n and arr_str[i] in (" ", ",", "\n", "\t"):
+            i += 1
+        if i >= n:
+            break
+        if arr_str[i:].startswith(_GEMMA_STRING_DELIM):
+            i += len(_GEMMA_STRING_DELIM)
+            end_pos = arr_str.find(_GEMMA_STRING_DELIM, i)
+            if end_pos == -1:
+                items.append(arr_str[i:])
+                break
+            items.append(arr_str[i:end_pos])
+            i = end_pos + len(_GEMMA_STRING_DELIM)
+        elif arr_str[i] == "{":
+            depth = 1
+            obj_start = i + 1
+            i += 1
+            while i < n and depth > 0:
+                if arr_str[i:].startswith(_GEMMA_STRING_DELIM):
+                    i += len(_GEMMA_STRING_DELIM)
+                    nd = arr_str.find(_GEMMA_STRING_DELIM, i)
+                    i = nd + len(_GEMMA_STRING_DELIM) if nd != -1 else n
+                    continue
+                if arr_str[i] == "{":
+                    depth += 1
+                elif arr_str[i] == "}":
+                    depth -= 1
+                i += 1
+            items.append(_parse_gemma4_args(arr_str[obj_start:i - 1]))
+        elif arr_str[i] == "[":
+            depth = 1
+            sub_start = i + 1
+            i += 1
+            while i < n and depth > 0:
+                if arr_str[i] == "[":
+                    depth += 1
+                elif arr_str[i] == "]":
+                    depth -= 1
+                i += 1
+            items.append(_parse_gemma4_array(arr_str[sub_start:i - 1]))
+        else:
+            val_start = i
+            while i < n and arr_str[i] not in (",", "]"):
+                i += 1
+            items.append(_parse_gemma4_value(arr_str[val_start:i]))
+    return items
+
+
+def _parse_gemma4_args(args_str: str) -> dict:
+    """Gemma4 key:value 포맷 파싱 → Python dict
+    
+    예시:
+        message:<|"|>hello<|"|>,title:<|"|>test<|"|>
+        count:42,flag:true
+        nested:{inner_key:<|"|>val<|"|>}
+    """
+    if not args_str or not args_str.strip():
+        return {}
+    result = {}
+    i = 0
+    n = len(args_str)
+    while i < n:
+        while i < n and args_str[i] in (" ", ",", "\n", "\t"):
+            i += 1
+        if i >= n:
+            break
+        # key 파싱 (: 까지)
+        key_start = i
+        while i < n and args_str[i] != ":":
+            i += 1
+        if i >= n:
+            break
+        key = args_str[key_start:i].strip()
+        i += 1  # skip ':'
+        if i >= n:
+            result[key] = ""
+            break
+        while i < n and args_str[i] in (" ", "\n", "\t"):
+            i += 1
+        if i >= n:
+            result[key] = ""
+            break
+        # 문자열 값: <|"|>...<|"|>
+        if args_str[i:].startswith(_GEMMA_STRING_DELIM):
+            i += len(_GEMMA_STRING_DELIM)
+            val_start = i
+            end_pos = args_str.find(_GEMMA_STRING_DELIM, i)
+            if end_pos == -1:
+                result[key] = args_str[val_start:]
+                break
+            result[key] = args_str[val_start:end_pos]
+            i = end_pos + len(_GEMMA_STRING_DELIM)
+        # 중첩 오브젝트: {...}
+        elif args_str[i] == "{":
+            depth = 1
+            obj_start = i + 1
+            i += 1
+            while i < n and depth > 0:
+                if args_str[i:].startswith(_GEMMA_STRING_DELIM):
+                    i += len(_GEMMA_STRING_DELIM)
+                    nd = args_str.find(_GEMMA_STRING_DELIM, i)
+                    i = n if nd == -1 else nd + len(_GEMMA_STRING_DELIM)
+                    continue
+                if args_str[i] == "{":
+                    depth += 1
+                elif args_str[i] == "}":
+                    depth -= 1
+                i += 1
+            result[key] = _parse_gemma4_args(args_str[obj_start:i - 1])
+        # 배열: [...]
+        elif args_str[i] == "[":
+            depth = 1
+            arr_start = i + 1
+            i += 1
+            while i < n and depth > 0:
+                if args_str[i:].startswith(_GEMMA_STRING_DELIM):
+                    i += len(_GEMMA_STRING_DELIM)
+                    nd = args_str.find(_GEMMA_STRING_DELIM, i)
+                    i = n if nd == -1 else nd + len(_GEMMA_STRING_DELIM)
+                    continue
+                if args_str[i] == "[":
+                    depth += 1
+                elif args_str[i] == "]":
+                    depth -= 1
+                i += 1
+            result[key] = _parse_gemma4_array(args_str[arr_start:i - 1])
+        # bare 값 (숫자, boolean 등)
+        else:
+            val_start = i
+            while i < n and args_str[i] not in (",", "}", "]"):
+                i += 1
+            result[key] = _parse_gemma4_value(args_str[val_start:i])
+    return result
+
+
+def _extract_gemma(text: str) -> List[Dict]:
+    """Gemma4 모델 tool call 추출
+    
+    패턴 1: <|tool_call>call:func_name{args}<tool_call|>  (vLLM 공식)
+    패턴 2: call:func_name{args}  (Ollama 경유, 스페셜 토큰 제거됨)
+    패턴 3: func_name{args}  (Ollama 경유, call: 접두사도 없음)
+    """
+    from tools import TOOLS
+    results = []
+    
+    # 패턴 1: <|tool_call>call:func_name{...}<tool_call|>
+    for m in re.finditer(
+        r'<\|tool_call>\s*call:(\w+)\s*\{(.*?)\}\s*<tool_call\|>',
+        text, re.DOTALL
+    ):
+        func_name, args_str = m.group(1), m.group(2)
+        if func_name in TOOLS:
+            results.append({"name": func_name, "arguments": _parse_gemma4_args(args_str)})
+    if results:
+        return results
+    
+    # 패턴 2: call:func_name{...}
+    for m in re.finditer(
+        r'\bcall:(\w+)\s*\{(.*?)\}',
+        text, re.DOTALL
+    ):
+        func_name, args_str = m.group(1), m.group(2)
+        if func_name in TOOLS:
+            results.append({"name": func_name, "arguments": _parse_gemma4_args(args_str)})
+    if results:
+        return results
+    
+    # 패턴 3: func_name{key:<|"|>value<|"|>}  (Ollama가 토큰을 완전히 스트립)
+    for m in re.finditer(
+        r'\b(\w+)\s*\{([^{}]*(?:<\|"\|>[^{}]*)*(?:\{[^{}]*\}[^{}]*)*)\}',
+        text, re.DOTALL
+    ):
+        func_name, args_str = m.group(1), m.group(2)
+        if func_name in TOOLS and (':' in args_str):
+            results.append({"name": func_name, "arguments": _parse_gemma4_args(args_str)})
     
     return results
 
@@ -199,13 +411,58 @@ def _extract_glm(text: str) -> List[Dict]:
 
 
 def _extract_raw_json(text: str) -> List[Dict]:
-    """태그 없이 raw JSON에서 tool call 추출 (GLM, 기타 폴백)"""
+    """태그 없이 raw JSON에서 tool call 추출 (GLM, 기타 폴백)
+    
+    중첩된 JSON도 처리 (depth 카운터 사용).
+    """
     from tools import TOOLS
     results = []
     
-    for match in re.finditer(r'\{[^{}]*"name"\s*:\s*"[^"]+?"[^{}]*\}', text):
+    # "name" 키를 포함하는 JSON 오브젝트 시작점 찾기
+    i = 0
+    while i < len(text):
+        # { 찾기
+        brace_pos = text.find('{', i)
+        if brace_pos == -1:
+            break
+        
+        # depth 카운터로 매칭하는 } 찾기
+        depth = 1
+        j = brace_pos + 1
+        in_string = False
+        escape_next = False
+        while j < len(text) and depth > 0:
+            c = text[j]
+            if escape_next:
+                escape_next = False
+                j += 1
+                continue
+            if c == '\\' and in_string:
+                escape_next = True
+                j += 1
+                continue
+            if c == '"' and not escape_next:
+                in_string = not in_string
+            elif not in_string:
+                if c == '{':
+                    depth += 1
+                elif c == '}':
+                    depth -= 1
+            j += 1
+        
+        if depth != 0:
+            i = brace_pos + 1
+            continue
+        
+        candidate = text[brace_pos:j]
+        i = j  # 다음 검색 위치
+        
+        # "name" 키가 있는지 빠르게 확인
+        if '"name"' not in candidate:
+            continue
+        
         try:
-            raw_obj = json.loads(match.group(0))
+            raw_obj = json.loads(candidate)
             raw_name = raw_obj.get("name", "")
             
             # GLM ::: 구분자 처리
@@ -261,10 +518,11 @@ def extract_tool_calls(text: str, model_type: str) -> List[Dict]:
         return []
     
     # 모든 파서 목록 (우선순위순)
-    all_parsers = [_extract_qwen, _extract_nemotron, _extract_glm, _extract_raw_json]
+    all_parsers = [_extract_gemma, _extract_qwen, _extract_nemotron, _extract_glm, _extract_raw_json]
     
     # 모델별 우선 파서
     preferred = {
+        "gemma": _extract_gemma,
         "qwen": _extract_qwen,
         "nemotron": _extract_nemotron,
         "glm": _extract_glm,
@@ -321,6 +579,13 @@ def get_tool_call_instruction(model_type: str) -> str:
             "\n⚠ 도구 호출 시 아래 JSON 형식으로 출력하세요:\n"
             "{\"name\":\"도구명\",\"arguments\":{...}}\n"
             "여러 도구를 호출하려면 JSON을 여러 번 출력하세요.\n"
+        )
+    
+    if model_type == "gemma":
+        return (
+            "\n⚠ 도구 호출 시 아래 형식을 사용하세요:\n"
+            "<tool_call>{\"name\":\"도구명\",\"arguments\":{...}}</tool_call>\n"
+            "여러 도구를 호출하려면 <tool_call>을 여러 번 출력하세요.\n"
         )
     
     # nanbeige, exaone, xlam, generic → Qwen 호환
