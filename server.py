@@ -1420,6 +1420,20 @@ def _prepare_context(session: Session, user_message: str) -> list:
             f"(no translation/conversion): {host_apps}"
         )
 
+    # ── 2b. URI 스킴 요약 주입 ──
+    host_uri = getattr(session, "host_uri_schemes_summary", "")
+    if host_uri:
+        session.messages[:] = [
+            m for m in session.messages
+            if not (m.get("role") == "system" and (m.get("content", "") or "").startswith("[Host URI Schemes]"))
+        ]
+        session.add_message("system",
+            f"[Host URI Schemes] Use host_open_url to open/control these apps via URI:\n"
+            f"{host_uri}\n"
+            f"Example: host_open_url(\"steam://run/730\") to launch CS2.\n"
+            f"If you don't know the exact URI parameter, use web_search first."
+        )
+
     # ── 3. 시맨틱 메모리 주입 ──
     check_and_summarize()
     try:
@@ -2294,6 +2308,9 @@ async def chat_stream(req: ChatRequest, _=Depends(verify_api_key)):
         apps = req.host_context.get("installed_apps", [])
         if apps:
             session.host_app_list = ", ".join(apps[:50])
+        uri_summary = req.host_context.get("uri_schemes_summary", "")
+        if uri_summary:
+            session.host_uri_schemes_summary = uri_summary
 
     # 기억 추출용 원본 메시지 저장
     _user_msg_for_extract = req.message
