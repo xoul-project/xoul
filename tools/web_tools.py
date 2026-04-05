@@ -640,7 +640,7 @@ def tool_browse_url(url: str, wait: int = 3) -> str:
     try:
         daemon_url = f"http://127.0.0.1:9223/fetch?url={encoded_url}"
         req = urllib.request.Request(daemon_url)
-        with urllib.request.urlopen(req, timeout=8) as resp:
+        with urllib.request.urlopen(req, timeout=13) as resp:
             data = _json.loads(resp.read().decode("utf-8"))
             content = data.get("content", "")
             if content and not content.startswith("❌") and len(content) > 50:

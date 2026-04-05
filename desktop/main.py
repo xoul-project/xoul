@@ -623,7 +623,9 @@ class App:
 
             import time
             time.sleep(3)
-            QTimer.singleShot(0, self._check_server)
+            # 세션 리셋 → 언어 등 설정 변경이 즉시 반영 (새 세션에서 config 다시 읽음)
+            QTimer.singleShot(0, self._reset_session)
+            QTimer.singleShot(500, self._check_server)
 
         threading.Thread(target=_sync, daemon=True).start()
 

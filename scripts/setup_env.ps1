@@ -1346,7 +1346,9 @@ Write-Host (T "setup.vm_packages_title") -ForegroundColor Yellow
 
 Write-Host (T "setup.vm_checking") -ForegroundColor Gray
 $vmScript = Join-Path $ProjectDir "vm_manager.py"
-$null = "" | & $venvPython $vmScript start 2>&1
+$vmStartProc = Start-Process -FilePath $venvPython -ArgumentList "`"$vmScript`" start" -WindowStyle Hidden -PassThru
+# VM 시작은 비동기 — 아래 SSH 연결 루프가 대기 처리
+Start-Sleep -Seconds 3
 
 $sshKey = Join-Path $ProjectDir "vm\xoul_key"
 if (-not (Test-Path $sshKey) -and (Test-Path "C:\xoul\vm\xoul_key")) {

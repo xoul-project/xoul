@@ -284,9 +284,17 @@ def start_chromium():
     return False
 
 
-def fetch_page_cdp(url: str, max_timeout: int = 12, idle_timeout: float = 2.0) -> tuple:
+def fetch_page_cdp(url: str, max_timeout: int = 10, idle_timeout: float = 2.0) -> tuple:
     """새 탭 생성 → CDP로 페이지 로드 + DOM 텍스트 추출 + 스크린샷 → 탭 닫기
-    Returns: (html: str, screenshot_base64: str)"""
+    Returns: (html: str, screenshot_base64: str)
+
+    종료 조건 (먼저 충족된 것이 우선):
+      1. Page.loadEventFired → 모든 리소스 로딩 완료 (이상적)
+      2. domContentLoaded 후 1.5초 추가 대기 → DOM 파싱 완료 (빠른 탈출)
+      3. 네트워크 idle (활성 요청 0개가 1초 유지) → 실질적 로딩 완료
+      4. max_timeout 초과 → 강제 종료 (안전장치)
+      5. 페이지 이벤트 없이 idle_timeout 경과 → 응답 없는 페이지
+    """
     tab_id = None
     ws = None
     final_screenshot = ""
@@ -342,15 +350,40 @@ def fetch_page_cdp(url: str, max_timeout: int = 12, idle_timeout: float = 2.0) -
             _screencast_buffer["url_idx"] = _screencast_buffer.get("url_idx", 0) + 1
             my_url_idx = _screencast_buffer["url_idx"]
         deadline = time.time() + max_timeout
-        last_activity = time.time()
+        last_page_event = time.time()  # 페이지 이벤트 전용 타이머 (스크린샷 제외)
         last_capture = time.time()
         capture_id = 900
 
+        # 네트워크 idle 추적
+        active_requests = 0          # 진행 중 네트워크 요청 수
+        net_idle_since = None        # 활성 요청이 0이 된 시각
+        NET_IDLE_THRESHOLD = 1.0     # 0개 요청이 이 시간 유지되면 idle 판정
+
+        # DOM 완료 추적
+        dom_content_loaded = False   # Page.domContentLoaded 수신 여부
+        dom_loaded_at = None         # domContentLoaded 수신 시각
+        DOM_GRACE_PERIOD = 1.5       # domContentLoaded 후 추가 대기 시간
+
         screenshot_sent = 0
         screenshot_recv = 0
+        exit_reason = "deadline"
         print(f"[browser_daemon] 🔍 fetch loop starting: url_idx={my_url_idx} timeout={max_timeout}s", flush=True)
         while time.time() < deadline:
             now = time.time()
+
+            # domContentLoaded 후 grace period 경과 → 탈출
+            if dom_content_loaded and (now - dom_loaded_at) >= DOM_GRACE_PERIOD:
+                exit_reason = "dom_grace"
+                print(f"[browser_daemon] ✅ DOM grace period done url_idx={my_url_idx} ({DOM_GRACE_PERIOD}s after domContentLoaded)", flush=True)
+                break
+
+            # 네트워크 idle 감지 (활성 요청 0개 → NET_IDLE_THRESHOLD초 유지)
+            if active_requests <= 0 and net_idle_since and dom_content_loaded:
+                if (now - net_idle_since) >= NET_IDLE_THRESHOLD:
+                    exit_reason = "net_idle"
+                    print(f"[browser_daemon] ✅ network idle url_idx={my_url_idx} (0 requests for {NET_IDLE_THRESHOLD}s)", flush=True)
+                    break
+
             if now - last_capture >= 0.5:
                 capture_id += 1
                 try:
@@ -376,6 +409,7 @@ def fetch_page_cdp(url: str, max_timeout: int = 12, idle_timeout: float = 2.0) -
                 msg_method = data.get("method", "")
                 msg_error = data.get("error", "")
 
+                # 스크린샷 응답 — 별도 처리 (페이지 이벤트 타이머에 영향 안 줌)
                 if msg_id >= 900:
                     screenshot_recv += 1
                     if msg_error:
@@ -399,20 +433,40 @@ def fetch_page_cdp(url: str, max_timeout: int = 12, idle_timeout: float = 2.0) -
                         print(f"[browser_daemon] ⚠ screenshot too small: id={msg_id} len={len(frame) if frame else 0}", flush=True)
                     continue
 
-                last_activity = time.time()
+                # 페이지 이벤트 → idle 타이머 리셋
+                last_page_event = time.time()
+
                 if msg_method == "Page.loadEventFired":
+                    exit_reason = "load"
                     print(f"[browser_daemon] ✅ Page.loadEventFired url_idx={my_url_idx} sent={screenshot_sent} recv={screenshot_recv}", flush=True)
-                    time.sleep(0.5)
+                    time.sleep(0.3)
                     break
+
+                if msg_method == "Page.domContentEventFired":
+                    dom_content_loaded = True
+                    dom_loaded_at = time.time()
+                    print(f"[browser_daemon] 📄 domContentLoaded url_idx={my_url_idx} (grace={DOM_GRACE_PERIOD}s)", flush=True)
+
+                # 네트워크 요청 추적
+                if msg_method == "Network.requestWillBeSent":
+                    active_requests += 1
+                    net_idle_since = None  # 새 요청 → idle 리셋
+                elif msg_method in ("Network.loadingFinished", "Network.loadingFailed"):
+                    active_requests = max(0, active_requests - 1)
+                    if active_requests <= 0 and not net_idle_since:
+                        net_idle_since = time.time()
+
             except socket.timeout:
-                idle = time.time() - last_activity
+                idle = time.time() - last_page_event
                 if idle >= idle_timeout:
-                    print(f"[browser_daemon] ⏱ idle timeout url_idx={my_url_idx} sent={screenshot_sent} recv={screenshot_recv}", flush=True)
+                    exit_reason = "page_idle"
+                    print(f"[browser_daemon] ⏱ page event idle url_idx={my_url_idx} ({idle:.1f}s) sent={screenshot_sent} recv={screenshot_recv}", flush=True)
                     break
             except Exception as e:
+                exit_reason = "error"
                 print(f"[browser_daemon] ⚠ loop error: {e}", flush=True)
                 break
-        print(f"[browser_daemon] 🔍 fetch loop done: url_idx={my_url_idx} sent={screenshot_sent} recv={screenshot_recv}", flush=True)
+        print(f"[browser_daemon] 🔍 fetch loop done: url_idx={my_url_idx} reason={exit_reason} sent={screenshot_sent} recv={screenshot_recv} net_reqs={active_requests}", flush=True)
 
         # ── DOM 텍스트 추출 (먼저 — 안정적으로 작동) ──
         html = ""

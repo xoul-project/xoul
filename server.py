@@ -391,14 +391,17 @@ def get_or_create_session(session_id: str = None) -> Session:
     # Response language instruction based on config
     lang = fresh_config.get("assistant", {}).get("language", "ko")
     if lang == "en":
-        response_language_instruction = "## Response Language\nAlways respond in English."
+        response_language_instruction = "## Response Language\nAlways respond in English regardless of the user's input language."
+        output_language_rule = "- Always respond in English. Include units ($, %, °C)."
     else:
         response_language_instruction = "## 응답 언어\n한국어로 답하세요. 파일로 저장하는 내용, 대본, 보고서, 이메일 본문 등 모든 생성 텍스트도 반드시 한국어로 작성하세요."
+        output_language_rule = "- Same language as user (Korean→Korean). Include units (원, %, °C)."
 
     # User instruction prompt (모든 규칙/도구 설명)
     user_instruction = USER_INSTRUCTION_TEMPLATE.format(
         tools_block=tools_block,
-        response_language_instruction=response_language_instruction
+        response_language_instruction=response_language_instruction,
+        output_language_rule=output_language_rule,
     )
     if _system_profile:
         user_instruction = _system_profile + "\n\n" + user_instruction

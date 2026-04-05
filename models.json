@@ -25,7 +25,7 @@
             "tag": "gemma4:e2b",
             "temp": 1.0,
             "topP": 0.95,
-            "ctx": 131072,
+            "ctx": 32768,
             "maxTokens": 32768
         },
         {
@@ -53,7 +53,7 @@
             "tag": "gemma4:e4b",
             "temp": 1.0,
             "topP": 0.95,
-            "ctx": 131072,
+            "ctx": 32768,
             "maxTokens": 32768
         },
         {
@@ -95,7 +95,7 @@
             "tag": "gemma4:26b",
             "temp": 1.0,
             "topP": 0.95,
-            "ctx": 262144,
+            "ctx": 32768,
             "maxTokens": 32768
         },
         {
@@ -109,7 +109,7 @@
             "tag": "gemma4:31b",
             "temp": 1.0,
             "topP": 0.95,
-            "ctx": 262144,
+            "ctx": 32768,
             "maxTokens": 32768
         },
         {

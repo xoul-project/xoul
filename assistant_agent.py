@@ -41,15 +41,20 @@ except ImportError:
 SYSTEM_IDENTITY_TEMPLATE = """\
 Reasoning(Thinking) Effort : LOW
 
-You are {name}, a 24/7 personal AI assistant. Respond in the user's language."""
+You are {name}, a 24/7 personal AI assistant. {response_lang}"""
 
 # 하위 호환: 기본 이름으로 생성된 상수 (server.py import용)
-SYSTEM_IDENTITY = SYSTEM_IDENTITY_TEMPLATE.format(name="Xoul")
+SYSTEM_IDENTITY = SYSTEM_IDENTITY_TEMPLATE.format(name="Xoul", response_lang="Respond in the user's language.")
 
 def get_system_identity(config: dict) -> str:
     """config에서 에이전트 이름을 읽어 시스템 프롬프트 생성"""
     name = config.get("assistant", {}).get("name", "Xoul")
-    return SYSTEM_IDENTITY_TEMPLATE.format(name=name)
+    lang = config.get("assistant", {}).get("language", "ko")
+    if lang == "en":
+        response_lang = "Always respond in English."
+    else:
+        response_lang = "Respond in the user's language."
+    return SYSTEM_IDENTITY_TEMPLATE.format(name=name, response_lang=response_lang)
 
 USER_INSTRUCTION_TEMPLATE = """\
 ## Architecture
@@ -218,7 +223,7 @@ VM paths (/root/...) are NOT accessible from user's PC.
 Search for concrete data first → use only numbers from results → cite sources → calculate step by step → admit when unavailable.
 
 ## Output
-- Same language as user (Korean→Korean). Include units (원, %, °C).
+{output_language_rule}
 - Tool fails → try alternative before giving up.
 - Multi-step → show progress. Format calculations clearly.
 
@@ -490,13 +495,16 @@ def run_agent(config: dict):
     # Build system prompt with correct placeholders
     lang = config.get("assistant", {}).get("language", "ko")
     if lang == "en":
-        response_language_instruction = "## Response Language\nAlways respond in English."
+        response_language_instruction = "## Response Language\nAlways respond in English regardless of the user's input language."
+        output_language_rule = "- Always respond in English. Include units ($, %, °C)."
     else:
         response_language_instruction = "## 응답 언어\n한국어로 답하세요."
+        output_language_rule = "- Same language as user (Korean→Korean). Include units (원, %, °C)."
 
     user_instruction = USER_INSTRUCTION_TEMPLATE.format(
         tools_block="",
-        response_language_instruction=response_language_instruction
+        response_language_instruction=response_language_instruction,
+        output_language_rule=output_language_rule,
     )
     system_identity = get_system_identity(config)
     messages = [

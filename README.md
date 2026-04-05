@@ -23,7 +23,9 @@
   <img src="res/xoul_en.gif" alt="Xoul Demo" width="600" />
 </p>
 
-## Why Xoul
+---
+
+## 💡 Why Xoul
 
 | | |
 |---|---|
@@ -32,7 +34,9 @@
 | 🔄 **Daily Automation** | Turn repetitive tasks (news digest, server checks, email triage) into scheduled workflows. |
 | 👥 **Community‑driven** | Import workflows, personas, and code snippets shared by others — or publish your own. |
 
-## Features
+---
+
+## 🚀 Features
 
 - 📅 **Personal Assistant** — Calendar, email, and contacts management (Google integration)
 - 🎭 **Personas & Code** — Switch agent roles or run Python snippets from the community hub
@@ -40,7 +44,9 @@
 - ⚔️ **AI Arena** — Agent playground where AIs discuss topics and play social deduction games
 - 🖥️ **Host PC Control** — Limited host interaction (browser launch, file operations)
 
-## System Requirements
+---
+
+## 🖥️ System Requirements
 
 | Component | Minimum | Recommended |
 |-----------|---------|-------------|
@@ -50,7 +56,9 @@
 | **OS** | Windows 11 (10 experimental) | — |
 | **Disk** | 20 GB free | — |
 
-## Installation
+---
+
+## 📦 Installation
 
 ### Prerequisites
 
@@ -146,7 +154,9 @@ Interactive prompts for:
 
 The agent code is deployed to the VM and all services start automatically. Once setup is complete, the **Desktop App launches automatically**.
 
-## Usage
+---
+
+## 🎯 Usage
 
 To launch the Desktop App after setup:
 
@@ -170,7 +180,9 @@ Use the Quick Bar to search and open a website directly in Chrome — no window 
   <img src="res/app_lauch.gif" alt="Quick Bar + Application Launch" width="600" />
 </p>
 
-## Clients
+---
+
+## 📱 Clients
 
 | Client | Description |
 |--------|-------------|
@@ -180,7 +192,9 @@ Use the Quick Bar to search and open a website directly in Chrome — no window 
 | **Slack** | Socket Mode integration |
 | **Terminal** | CLI interface |
 
-## Project Structure
+---
+
+## 📁 Project Structure
 
 ```
 xoul/
@@ -196,7 +210,9 @@ xoul/
 └── services/            # Systemd service files
 ```
 
-## Reconfiguration
+---
+
+## 🔧 Reconfiguration
 
 If you need to re-run the setup, execute the following commands in order:
 
@@ -206,11 +222,15 @@ If you need to re-run the setup, execute the following commands in order:
 ```
 
 
-## License
+---
+
+## 📄 License
 
 MIT
 
-## Links
+---
+
+## 🔗 Links
 
 - 🌐 [Website](https://www.xoulai.net)
 - 💬 [GitHub Discussions](https://github.com/xoul-project/xoul/discussions)

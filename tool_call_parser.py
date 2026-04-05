@@ -38,6 +38,37 @@ def detect_model_type(model_name: str) -> str:
 # 2. 모델별 Tool Call 추출
 # ───────────────────────────────────────────
 
+def _fix_json_newlines(text: str) -> str:
+    """JSON 문자열 값 안의 이스케이프되지 않은 줄바꿈/탭을 \\n/\\t로 변환.
+    
+    LLM이 send_email body 등에 raw newline을 넣는 경우 json.loads()가 실패하므로
+    문자열 값 내부의 제어 문자만 이스케이프한다.
+    """
+    result = []
+    in_string = False
+    i = 0
+    while i < len(text):
+        c = text[i]
+        if c == '\\' and in_string and i + 1 < len(text):
+            result.append(c)
+            result.append(text[i + 1])
+            i += 2
+            continue
+        if c == '"':
+            in_string = not in_string
+            result.append(c)
+        elif c == '\n' and in_string:
+            result.append('\\n')
+        elif c == '\r' and in_string:
+            result.append('\\r')
+        elif c == '\t' and in_string:
+            result.append('\\t')
+        else:
+            result.append(c)
+        i += 1
+    return ''.join(result)
+
+
 def _parse_json_tool(raw: str) -> Optional[Dict]:
     """JSON 문자열에서 tool call 데이터를 파싱합니다."""
     try:
@@ -62,7 +93,12 @@ def _parse_json_tool(raw: str) -> Optional[Dict]:
                     break
             if end_idx:
                 raw = raw[:end_idx]
-            raw_obj = json.loads(raw)
+            # 1차: 그대로 파싱
+            try:
+                raw_obj = json.loads(raw)
+            except json.JSONDecodeError:
+                # 2차: 문자열 값 안의 raw newline을 이스케이프하여 재시도
+                raw_obj = json.loads(_fix_json_newlines(raw))
         
         name = raw_obj.get("name", "")
         arguments = raw_obj.get("arguments", raw_obj.get("parameters", {}))
@@ -462,7 +498,38 @@ def _extract_raw_json(text: str) -> List[Dict]:
             continue
         
         try:
-            raw_obj = json.loads(candidate)
+            # 1차: 그대로 파싱
+            try:
+                raw_obj = json.loads(candidate)
+            except json.JSONDecodeError:
+                # 2차: 문자열 값 안의 raw newline을 이스케이프하여 재시도
+                try:
+                    raw_obj = json.loads(_fix_json_newlines(candidate))
+                except json.JSONDecodeError:
+                    # 3차: name과 arguments를 개별 추출
+                    name_m = re.search(r'"name"\s*:\s*"([^"]+)"', candidate)
+                    if name_m and name_m.group(1) in TOOLS:
+                        args_m = re.search(r'"arguments"\s*:\s*(\{.*)', candidate, re.DOTALL)
+                        args = {}
+                        if args_m:
+                            args_raw = args_m.group(1).strip()
+                            depth = 0
+                            end = 0
+                            for ci, cc in enumerate(args_raw):
+                                if cc == '{': depth += 1
+                                elif cc == '}': depth -= 1
+                                if depth == 0 and ci > 0:
+                                    end = ci + 1
+                                    break
+                            if end > 0:
+                                try:
+                                    args = json.loads(_fix_json_newlines(args_raw[:end]))
+                                except json.JSONDecodeError:
+                                    args = {}
+                        results.append({"name": name_m.group(1), "arguments": args})
+                    i = j
+                    continue
+
             raw_name = raw_obj.get("name", "")
             
             # GLM ::: 구분자 처리
