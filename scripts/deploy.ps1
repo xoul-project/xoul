@@ -86,7 +86,7 @@ if (-not $connected) {
 
 # ── 2. VM에 디렉토리 생성 ──
 Write-Host "  🔧 Creating VM directory structure..." -ForegroundColor Yellow
-ssh -p $sshPort -i "$sshKey" -o StrictHostKeyChecking=no root@127.0.0.1 "mkdir -p /root/xoul/tools /root/xoul/services /root/xoul/locales /root/.xoul/skills /root/.xoul/sessions /root/workspace /root/share"
+ssh -p $sshPort -i "$sshKey" -o StrictHostKeyChecking=no root@127.0.0.1 "mkdir -p /root/xoul/tools /root/xoul/services /root/xoul/locales /root/xoul/clients /root/.xoul/skills /root/.xoul/sessions /root/workspace /root/share"
 
 # ── 3. API 키 동기화 ──
 # HOST config.json에 api_key 없으면 생성 (VM과 동일 키 사용)
@@ -119,11 +119,11 @@ $filesToDeploy = @()
 # 핵심 파일
 $agentFiles = @(
     "server.py", "llm_client.py", "assistant_agent.py",
-    "terminal_client.py", "config.json", "google_auth.py", "i18n.py",
+    "clients/terminal_client.py", "config.json", "google_auth.py", "i18n.py",
     "requirements.txt",
     "services/xoul.service", "services/xoul-telegram.service", "services/xoul-browser.service",
     "services/xoul-discord.service", "services/xoul-slack.service",
-    "telegram_client.py", "discord_client.py", "slack_client.py",
+    "clients/telegram_client.py", "clients/discord_client.py", "clients/slack_client.py",
     "tool_call_parser.py", "browser_daemon.py"
 )
 foreach ($file in $agentFiles) {

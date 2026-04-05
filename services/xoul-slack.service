@@ -6,7 +6,7 @@ Wants=xoul.service
 [Service]
 Type=simple
 WorkingDirectory=/root/xoul
-ExecStart=/usr/bin/python3 /root/xoul/slack_client.py
+ExecStart=/usr/bin/python3 /root/xoul/clients/slack_client.py
 Restart=always
 RestartSec=10
 Environment=XOUL_CONFIG=/root/xoul/config.json

@@ -15,7 +15,8 @@ import urllib.error
 
 # i18n 초기화
 _script_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, _script_dir)
+_project_dir = os.path.dirname(_script_dir)
+sys.path.insert(0, _project_dir)
 from i18n import t, init_from_config
 
 
@@ -35,7 +36,7 @@ def _spinner(stop_event, msg=None):
 
 
 def main():
-    script_dir = os.path.dirname(os.path.abspath(__file__))
+    script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     config_path = os.path.join(script_dir, "config.json")
 
     if len(sys.argv) > 2 and sys.argv[1] == "--config":

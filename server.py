@@ -3009,7 +3009,7 @@ async def telegram_webhook(request: Request):
                     (notif_id,)
                 ).fetchone()
 
-                from telegram_client import TelegramBot
+                from clients.telegram_client import TelegramBot
                 bot = TelegramBot(bot_token)
 
                 if row:
@@ -3152,7 +3152,7 @@ def _run_scheduled_task(task: dict):
             # 텔레그램: 인라인 "상세 보기" 버튼 포함
             tg_cfg = config.get("clients", {}).get("telegram", {})
             if tg_cfg.get("enabled") and tg_cfg.get("bot_token") and tg_cfg.get("chat_id"):
-                from telegram_client import TelegramBot
+                from clients.telegram_client import TelegramBot
                 bot = TelegramBot(tg_cfg["bot_token"])
                 msg_text = f"⏰ *{wf_name}* 완료!\n\n📝 {preview}"
                 bot.send_message_with_button(
@@ -3165,12 +3165,12 @@ def _run_scheduled_task(task: dict):
             # Discord / Slack: 버튼 미지원 → 전체 결과 전송
             full_notify = f"{notify_msg}\n\n{response[:1500]}"
             try:
-                from discord_client import send_notification as dc_send
+                from clients.discord_client import send_notification as dc_send
                 dc_send(full_notify, notify_title)
             except Exception:
                 pass
             try:
-                from slack_client import send_notification as sl_send
+                from clients.slack_client import send_notification as sl_send
                 sl_send(full_notify, notify_title)
             except Exception:
                 pass
@@ -3268,7 +3268,7 @@ def _telegram_callback_poller():
                             (notif_id,)
                         ).fetchone()
 
-                        from telegram_client import TelegramBot
+                        from clients.telegram_client import TelegramBot
                         bot = TelegramBot(bot_token)
 
                         if row:
@@ -3382,8 +3382,8 @@ if __name__ == "__main__":
     scheduler_thread = threading.Thread(target=_scheduler_loop, daemon=True)
     scheduler_thread.start()
 
-    # 텔레그램 콜백 폴러 — telegram_client.py의 run_polling에서 통합 처리
-    # (server.py와 telegram_client.py가 동시에 getUpdates 호출하면 409 Conflict 발생)
+    # 텔레그램 콜백 폴러 — clients/telegram_client.py의 run_polling에서 통합 처리
+    # (server.py와 clients/telegram_client.py가 동시에 getUpdates 호출하면 409 Conflict 발생)
     # tg_poller_thread = threading.Thread(target=_telegram_callback_poller, daemon=True)
     # tg_poller_thread.start()
 

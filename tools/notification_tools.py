@@ -10,7 +10,7 @@ def tool_send_notification(message: str, title: str = "") -> str:
 
     # Telegram
     try:
-        from telegram_client import send_notification as tg_send
+        from clients.telegram_client import send_notification as tg_send
         r = tg_send(message, title)
         if "✅" in r:
             results.append("Telegram ✅")
@@ -19,7 +19,7 @@ def tool_send_notification(message: str, title: str = "") -> str:
 
     # Discord
     try:
-        from discord_client import send_notification as dc_send
+        from clients.discord_client import send_notification as dc_send
         r = dc_send(message, title)
         if "✅" in r:
             results.append("Discord ✅")
@@ -28,7 +28,7 @@ def tool_send_notification(message: str, title: str = "") -> str:
 
     # Slack
     try:
-        from slack_client import send_notification as sl_send
+        from clients.slack_client import send_notification as sl_send
         r = sl_send(message, title)
         if "✅" in r:
             results.append("Slack ✅")
