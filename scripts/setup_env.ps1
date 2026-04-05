@@ -42,10 +42,10 @@ Write-Host "  ┌─────────────────────
 Write-Host "  │  Select Language / 언어를 선택하세요            │" -ForegroundColor Cyan
 Write-Host "  └──────────────────────────────────────────────┘" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "  1. 한국어 (Korean)     — 모든 안내와 메시지가 한국어로 표시됩니다" -ForegroundColor White
-Write-Host "  2. English             — All guides and messages will be in English" -ForegroundColor White
+Write-Host "  1. English             — All guides and messages will be in English" -ForegroundColor White
+Write-Host "  2. 한국어 (Korean)     — 모든 안내와 메시지가 한국어로 표시됩니다" -ForegroundColor White
 Write-Host ""
-$defaultNum = if ($existingLang -eq "en") { "2" } else { "1" }
+$defaultNum = if ($existingLang -eq "ko") { "2" } else { "1" }
 do {
     $langChoice = Safe-ReadHost "  선택 / Select (1-2, default: $defaultNum)"
     if (-not $langChoice) { $langChoice = $defaultNum }
@@ -55,13 +55,13 @@ do {
 } while ($langChoice -notin @("1","2"))
 
 if ($langChoice -eq "2") {
-    Load-Locale "en"
-    $selectedLang = "en"
-    Write-Host "  → English selected" -ForegroundColor Green
-} else {
     Load-Locale "ko"
     $selectedLang = "ko"
     Write-Host "  → 한국어 선택됨" -ForegroundColor Green
+} else {
+    Load-Locale "en"
+    $selectedLang = "en"
+    Write-Host "  → English selected" -ForegroundColor Green
 }
 
 Write-Host ""
