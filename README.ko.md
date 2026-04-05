@@ -77,7 +77,8 @@ cd xoul
 .\scripts\setup_env.ps1
 ```
 
-### 설치 과정 상세
+<details>
+<summary><strong>📋 설치 과정 상세 (클릭하여 펼치기)</strong></summary>
 
 #### Step 1 — 언어 선택
 
@@ -145,6 +146,8 @@ Python 3.12로 `.venv` 생성, 모든 패키지 자동 설치.
 #### Step 7 — 배포 및 실행
 
 에이전트 코드가 VM에 배포되고 모든 서비스가 자동 시작됩니다. 설정이 완료되면 **Desktop App이 자동으로 실행**됩니다.
+
+</details>
 
 ---
 

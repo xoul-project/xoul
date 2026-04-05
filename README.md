@@ -85,11 +85,14 @@ cd xoul
 .\scripts\setup_env.ps1
 ```
 
-### Step 1 — Language
+<details>
+<summary><strong>📋 Setup Steps Detail (Click to expand)</strong></summary>
+
+#### Step 1 — Language
 
 Choose between Korean and English for all UI and messages.
 
-### Step 2 — LLM Model
+#### Step 2 — LLM Model
 
 Three options:
 
@@ -110,7 +113,7 @@ Local models are selected based on your VRAM:
 
 Additionally, **BGE‑M3** (embedding) and **Qwen 2.5 3B** (summarization, CPU‑only) are installed automatically.
 
-### Step 3 — QEMU VM
+#### Step 3 — QEMU VM
 
 QEMU is installed via `winget`. The setup tests WHPX hardware acceleration and creates or copies a VM image (~10 GB).
 
@@ -132,15 +135,15 @@ Restart-Computer
 > [!TIP]
 > After enabling, re-run `setup_env.ps1` and WHPX acceleration will be automatically detected and applied.
 
-### Step 4 — Python Environment
+#### Step 4 — Python Environment
 
 A `.venv` is created with Python 3.12. All dependencies (`openai`, PyQt6, etc.) are installed from `requirements.txt`.
 
-### Step 5 — VM Image
+#### Step 5 — VM Image
 
 If a pre‑built `xoul.qcow2` is found, it's copied to the VM directory. Otherwise, a fresh image is created from a cloud image (~10–15 min).
 
-### Step 6 — Configuration
+#### Step 6 — Configuration
 
 Interactive prompts for:
 
@@ -150,9 +153,11 @@ Interactive prompts for:
 - **Telegram / Discord / Slack** — bot token setup (optional)
 - **GitHub** — Personal Access Token for repo tools (optional)
 
-### Step 7 — Deploy & Launch
+#### Step 7 — Deploy & Launch
 
 The agent code is deployed to the VM and all services start automatically. Once setup is complete, the **Desktop App launches automatically**.
+
+</details>
 
 ---
 
