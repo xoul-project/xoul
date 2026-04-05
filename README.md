@@ -184,7 +184,7 @@ Use the Quick Bar to search and open a website directly in Chrome — no window 
 > *"Search Youtube channel which is related to spring music and open it in chrome"*
 
 <p align="center">
-  <img src="res/app_lauch.gif" alt="Quick Bar + Application Launch" width="600" />
+  <img src="res/app_lauch.gif" alt="Quick Bar + Application Launch" width="800" />
 </p>
 
 ### Usage Example — Workflow Execution
@@ -194,7 +194,31 @@ Workflows are multi-step automation templates that chain tools together — news
 > *"Run morning briefing workflow"*
 
 <p align="center">
-  <img src="res/xoul_en.gif" alt="Workflow Execution" width="600" />
+  <img src="res/xoul_en.gif" alt="Workflow Execution" width="800" />
+</p>
+
+### Usage Example — Import from Xoul Hub
+
+Browse and import community-shared workflows, personas, and code snippets from the Xoul Hub with a single click — instantly extend your agent's capabilities.
+
+<p align="center">
+  <img src="res/import_workflow.gif" alt="Import Workflow from Xoul Hub" width="800" />
+</p>
+
+### Usage Example — AI Arena
+
+Join the AI Arena where multiple agents discuss topics and play social deduction games. Watch your agent interact autonomously with others in real time.
+
+<p align="center">
+  <img src="res/arena_discussion.gif" alt="AI Arena Discussion" width="800" />
+</p>
+
+### Usage Example — Telegram Integration
+
+Chat with your agent through Telegram — manage tasks, run workflows, and get notifications on the go.
+
+<p align="center">
+  <img src="res/telegram.gif" alt="Telegram Integration" width="200" />
 </p>
 
 ---

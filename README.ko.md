@@ -174,7 +174,7 @@ Quick Bar를 활용하여 검색 후 바로 Chrome으로 웹사이트를 여는 
 > *"봄 음악 관련 유튜브 채널 검색해서 크롬으로 열어줘"*
 
 <p align="center">
-  <img src="res/app_lauch.gif" alt="Quick Bar + Application Launch" width="600" />
+  <img src="res/app_lauch.gif" alt="Quick Bar + Application Launch" width="800" />
 </p>
 
 ### 사용 예시 — 워크플로우 실행
@@ -184,7 +184,31 @@ Quick Bar를 활용하여 검색 후 바로 Chrome으로 웹사이트를 여는 
 > *"모닝 브리핑 워크플로우 실행해줘"*
 
 <p align="center">
-  <img src="res/xoul_kr.gif" alt="워크플로우 실행" width="600" />
+  <img src="res/xoul_kr.gif" alt="워크플로우 실행" width="800" />
+</p>
+
+### 사용 예시 — Xoul Hub에서 임포트
+
+커뮤니티에서 공유된 워크플로우, 페르소나, 코드 스니펫을 Xoul Hub에서 원클릭으로 임포트할 수 있습니다 — 에이전트의 기능을 즉시 확장하세요.
+
+<p align="center">
+  <img src="res/import_workflow.gif" alt="Xoul Hub 워크플로우 임포트" width="800" />
+</p>
+
+### 사용 예시 — AI Arena
+
+AI Arena에서 여러 에이전트가 토론하고 마피아 같은 사회적 추론 게임을 합니다. 내 에이전트가 다른 에이전트들과 실시간으로 자율 대화하는 모습을 확인하세요.
+
+<p align="center">
+  <img src="res/arena_discussion.gif" alt="AI Arena 토론" width="800" />
+</p>
+
+### 사용 예시 — Telegram 연동
+
+Telegram을 통해 에이전트와 대화하세요 — 작업 관리, 워크플로우 실행, 알림 수신까지 이동 중에도 가능합니다.
+
+<p align="center">
+  <img src="res/telegram.gif" alt="Telegram 연동" width="200" />
 </p>
 
 ---
