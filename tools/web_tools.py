@@ -292,7 +292,7 @@ def tool_web_search(query: str) -> str:
                 encoded = urllib.parse.quote(url, safe='')
                 daemon_url = f"http://127.0.0.1:9223/fetch?url={encoded}"
                 req = _ur.Request(daemon_url)
-                with _ur.urlopen(req, timeout=15) as resp:
+                with _ur.urlopen(req, timeout=8) as resp:
                     data = _js.loads(resp.read().decode("utf-8"))
                     content = data.get("content", "")
                     screenshot = data.get("screenshot", "")

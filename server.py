@@ -11,6 +11,7 @@ VM 안에서 실행되며, 다양한 클라이언트(터미널, 텔레그램, �
 
 import json
 import os
+import socket
 import sys
 import uuid
 import secrets
@@ -735,7 +736,7 @@ def _execute_tool_streaming(t_name, t_args):
                 daemon_url = f"http://127.0.0.1:9223/screencast{param}"
                 print(f"[screencast] 📹 connecting to {daemon_url[:100]}...", flush=True)
                 req = urllib.request.Request(daemon_url)
-                resp = urllib.request.urlopen(req, timeout=35)
+                resp = urllib.request.urlopen(req, timeout=20)
                 _sc_resp[0] = resp  # 강제 종료를 위해 저장
                 try:
                     print(f"[screencast] 📹 connected, reading frames...", flush=True)

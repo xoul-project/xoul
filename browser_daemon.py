@@ -20,6 +20,7 @@ import sys
 import time
 import threading
 import urllib.request
+import urllib.error
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
 from urllib.parse import urlparse, parse_qs
@@ -302,8 +303,19 @@ def fetch_page_cdp(url: str, max_timeout: int = 10, idle_timeout: float = 2.0) -
         # 빈 탭 생성 (URL 없이 — 이벤트 등록 후 navigate)
         new_tab_url = f"http://127.0.0.1:{CHROMIUM_PORT}/json/new"
         req = urllib.request.Request(new_tab_url, method='PUT')
-        with urllib.request.urlopen(req, timeout=5) as resp:
-            tab_info = json.loads(resp.read().decode())
+        try:
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                tab_info = json.loads(resp.read().decode())
+        except (urllib.error.URLError, ConnectionRefusedError, OSError):
+            # Chromium 크래시 복구: 좀비 kill → 재시작
+            print("[browser_daemon] ⚠ Chromium 연결 실패, 자동 복구 시도...", flush=True)
+            _cleanup_ports()
+            if start_chromium():
+                req = urllib.request.Request(new_tab_url, method='PUT')
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    tab_info = json.loads(resp.read().decode())
+            else:
+                return "", ""
         tab_id = tab_info.get("id", "")
         ws_url = tab_info.get("webSocketDebuggerUrl", "")
         if not ws_url:
@@ -694,7 +706,7 @@ class BrowserHandler(BaseHTTPRequestHandler):
             # 큐 초기화
             with _screencast_lock:
                 _screencast_queue.clear()
-            deadline = time.time() + 90
+            deadline = time.time() + 30
             frame_count = 0
             poll_log_counter = 0
             while time.time() < deadline and not _screencast_stop and _screencast_session_id == my_session:
@@ -832,7 +844,24 @@ class BrowserHandler(BaseHTTPRequestHandler):
             pass
 
 
+def _cleanup_ports():
+    """시작 전 포트 9222/9223 점유 프로세스 강제 종료 (좀비 방지)"""
+    for port in (CHROMIUM_PORT, DAEMON_PORT):
+        try:
+            result = subprocess.run(
+                f"fuser -k {port}/tcp", shell=True,
+                capture_output=True, text=True, timeout=5
+            )
+            if result.stdout.strip():
+                print(f"[browser_daemon] 🧹 포트 {port} 점유 프로세스 종료: {result.stdout.strip()}", flush=True)
+                time.sleep(0.5)
+        except Exception:
+            pass
+
+
 def main():
+    _cleanup_ports()
+
     if not start_chromium():
         print("[browser_daemon] ⚠ Chromium 없이 wget 폴백 모드로 동작합니다.", flush=True)
 
