@@ -642,6 +642,10 @@
     "server": {
         "internal_error": "서버 내부 오류: {error}"
     },
+    "api": {
+        "code_imported": "코드가 import 되었습니다.",
+        "code_updated": "코드가 업데이트 되었습니다."
+    },
     "desktop": {
         "more": "더보기",
         "show_more": "더보기",

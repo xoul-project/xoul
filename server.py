@@ -2654,7 +2654,8 @@ async def import_code(req: CodeImportRequest, _=Depends(verify_api_key)):
             """, (req.code, req.description, req.params, req.name))
             conn.commit()
             conn.close()
-            return {"message": f"✅ '{req.name}' 코드가 업데이트 되었습니다."}
+            from i18n import t as _t
+            return {"message": f"✅ '{req.name}' " + _t("api.code_updated")}
 
         from datetime import datetime
         conn.execute("""
@@ -2663,7 +2664,8 @@ async def import_code(req: CodeImportRequest, _=Depends(verify_api_key)):
         """, (req.name, req.description, req.code, req.params, datetime.now().strftime("%Y-%m-%d %H:%M")))
         conn.commit()
         conn.close()
-        return {"message": f"✅ '{req.name}' 코드가 import 되었습니다."}
+        from i18n import t as _t
+        return {"message": f"✅ '{req.name}' " + _t("api.code_imported")}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

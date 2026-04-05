@@ -642,6 +642,10 @@
     "server": {
         "internal_error": "Internal server error: {error}"
     },
+    "api": {
+        "code_imported": "code has been imported.",
+        "code_updated": "code has been updated."
+    },
     "desktop": {
         "more": "More",
         "show_more": "More",

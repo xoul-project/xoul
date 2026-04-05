@@ -177,13 +177,48 @@ Press `Ctrl+Space` anywhere to open the **Quick Bar** — a floating input bar t
   <img src="res/quick.png" alt="Quick Bar" width="500" />
 </p>
 
-### Use Example — Quick Bar + Application Launch
+### Usage Example — Quick Bar + Application Launch
 
 Use the Quick Bar to search and open a website directly in Chrome — no window switching needed.
+
+> *"Search Youtube channel which is related to spring music and open it in chrome"*
 
 <p align="center">
   <img src="res/app_lauch.gif" alt="Quick Bar + Application Launch" width="600" />
 </p>
+
+### Usage Example — Workflow Execution
+
+Workflows are multi-step automation templates that chain tools together — news digest, server health checks, email triage, and more. Trigger any workflow with a single command.
+
+> *"Run morning briefing workflow"*
+
+<p align="center">
+  <img src="res/xoul_en.gif" alt="Workflow Execution" width="600" />
+</p>
+
+---
+
+## 🧠 Supported Local Models
+
+Models are automatically selected based on your available VRAM during setup.
+
+| # | Model | VRAM | Speed | Quality |
+|---|-------|------|-------|---------|
+| 1 | Nemotron-3-Nano 4B (Q8) | 7 GB | Fast | Low |
+| 2 | Gemma 4 E2B ⚠️ | 8 GB | Fast | Mid |
+| 3 | Nemotron-3-Nano 4B (BF16) | 10 GB | Fast | Mid |
+| 4 | Gemma 4 E4B ⚠️ | 10 GB | Fast | Mid |
+| 5 | Qwen3-VL-8B-Instruct | 14 GB | Fast | Mid |
+| 6 | GPT-oss 20B | 16 GB | Fast | Good |
+| 7 | Gemma 4 26B ⚠️ | 18 GB | Mid | Good |
+| 8 | Gemma 4 31B ⚠️ | 20 GB | Mid | Nice |
+| 9 | Nemotron-Cascade-2 30B | 24 GB | Little Slow | Nice |
+
+> [!NOTE]
+> ⚠️ **Gemma 4 series** — Flash Attention with Gemma 4 on Ollama is not stable yet, so Flash Attention is currently disabled. This may result in slightly slower inference than expected.
+
+Additionally, **BGE-M3** (embedding) and **Qwen 2.5 3B** (summarization, CPU-only) are installed automatically.
 
 ---
 

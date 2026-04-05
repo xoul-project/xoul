@@ -171,9 +171,44 @@ c:\xoul\desktop\xoul.bat
 
 Quick Bar를 활용하여 검색 후 바로 Chrome으로 웹사이트를 여는 모습입니다 — 창 전환 없이 한 번에 처리됩니다.
 
+> *"봄 음악 관련 유튜브 채널 검색해서 크롬으로 열어줘"*
+
 <p align="center">
   <img src="res/app_lauch.gif" alt="Quick Bar + Application Launch" width="600" />
 </p>
+
+### 사용 예시 — 워크플로우 실행
+
+워크플로우는 여러 도구를 연결하는 다단계 자동화 템플릿입니다 — 뉴스 요약, 서버 점검, 이메일 정리 등. 한 마디로 어떤 워크플로우든 즉시 실행할 수 있습니다.
+
+> *"모닝 브리핑 워크플로우 실행해줘"*
+
+<p align="center">
+  <img src="res/xoul_kr.gif" alt="워크플로우 실행" width="600" />
+</p>
+
+---
+
+## 🧠 지원 로컬 모델
+
+설치 시 VRAM 용량에 따라 자동으로 최적 모델이 선택됩니다.
+
+| # | 모델 | VRAM | 속도 | 품질 |
+|---|------|------|------|------|
+| 1 | Nemotron-3-Nano 4B (Q8) | 7 GB | 빠름 | 낮음 |
+| 2 | Gemma 4 E2B ⚠️ | 8 GB | 빠름 | 중간 |
+| 3 | Nemotron-3-Nano 4B (BF16) | 10 GB | 빠름 | 중간 |
+| 4 | Gemma 4 E4B ⚠️ | 10 GB | 빠름 | 중간 |
+| 5 | Qwen3-VL-8B-Instruct | 14 GB | 빠름 | 중간 |
+| 6 | GPT-oss 20B | 16 GB | 빠름 | 좋음 |
+| 7 | Gemma 4 26B ⚠️ | 18 GB | 보통 | 좋음 |
+| 8 | Gemma 4 31B ⚠️ | 20 GB | 보통 | 우수 |
+| 9 | Nemotron-Cascade-2 30B | 24 GB | 약간 느림 | 우수 |
+
+> [!NOTE]
+> ⚠️ **Gemma 4 시리즈** — 현재 Ollama에서 Gemma 4의 Flash Attention이 불안정하여 비활성화된 상태입니다. 이로 인해 예상보다 추론 속도가 다소 느릴 수 있습니다.
+
+**BGE-M3** (임베딩)과 **Qwen 2.5 3B** (요약, CPU 전용)도 자동 설치됩니다.
 
 ---
 
